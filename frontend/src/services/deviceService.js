@@ -1,0 +1,34 @@
+import api from './api';
+
+export const deviceService = {
+  // Lấy danh sách thiết bị
+  getAll: async () => {
+    const response = await api.get('/devices');
+    return response.data;
+  },
+
+  // Lấy thông tin một thiết bị
+  getById: async (id) => {
+    const response = await api.get(`/devices/${id}`);
+    return response.data;
+  },
+
+  // Tạo thiết bị mới
+  create: async (deviceData) => {
+    const response = await api.post('/devices', deviceData);
+    return response.data;
+  },
+
+  // Cập nhật thiết bị
+  update: async (id, deviceData) => {
+    const response = await api.put(`/devices/${id}`, deviceData);
+    return response.data;
+  },
+
+  // Xóa thiết bị
+  delete: async (id) => {
+    const response = await api.delete(`/devices/${id}`);
+    return response.data;
+  },
+};
+
