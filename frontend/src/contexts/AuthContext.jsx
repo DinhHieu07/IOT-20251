@@ -11,33 +11,34 @@ export function AuthProvider({ children }) {
 
   // Kiểm tra token khi app khởi động
   useEffect(() => {
-    const initAuth = async () => {
+    const initializeAuth = async () => {
       const accessToken = authService.getAccessToken();
+      
       if (accessToken) {
-        // Set token vào axios header
+        // Có accessToken trong memory, thử lấy user
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-        // Lấy thông tin user
         await fetchCurrentUser();
       } else {
-        // Nếu không có access token (ví dụ khi F5), thử refresh token
+        // Không có accessToken, thử refresh từ cookie
         try {
           const refreshResponse = await authService.refreshToken();
           if (refreshResponse.success) {
-            const { accessToken } = refreshResponse.data;
-            authService.setAccessToken(accessToken);
-            api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-            // Lấy thông tin user sau khi refresh thành công
+            const { accessToken: newToken } = refreshResponse.data;
+            authService.setAccessToken(newToken);
+            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+            // Lấy thông tin user sau khi refresh
             await fetchCurrentUser();
           } else {
             setLoading(false);
           }
         } catch (error) {
+          // Không có refreshToken hoặc refresh thất bại
           setLoading(false);
         }
       }
     };
 
-    initAuth();
+    initializeAuth();
   }, []);
 
   const fetchCurrentUser = async () => {
