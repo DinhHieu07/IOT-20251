@@ -169,11 +169,56 @@ const getLatestSensorData = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Lấy thời gian hoạt động của quạt
+ */
+const getFanRuntime = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Tìm device theo ID hoặc macAddress
+  let device = await Device.findById(id);
+  if (!device) {
+    device = await Device.findOne({ macAddress: id });
+  }
+  
+  if (!device) {
+    return res.status(404).json({
+      success: false,
+      message: 'Device không tồn tại'
+    });
+  }
+  
+  const fan1Hours = (device.fanRuntime?.fan1TotalMs || 0) / 3600000;
+  const fan2Hours = (device.fanRuntime?.fan2TotalMs || 0) / 3600000;
+  
+  res.json({
+    success: true,
+    data: {
+      deviceId: device._id,
+      deviceName: device.name,
+      macAddress: device.macAddress,
+      fanRuntime: {
+        fan1: {
+          totalMs: device.fanRuntime?.fan1TotalMs || 0,
+          totalHours: parseFloat(fan1Hours.toFixed(2)),
+          lastUpdated: device.fanRuntime?.lastUpdated
+        },
+        fan2: {
+          totalMs: device.fanRuntime?.fan2TotalMs || 0,
+          totalHours: parseFloat(fan2Hours.toFixed(2)),
+          lastUpdated: device.fanRuntime?.lastUpdated
+        }
+      }
+    }
+  });
+});
+
 module.exports = {
   getDevices,
   getDeviceById,
   controlDevice,
   getDeviceSensorData,
-  getLatestSensorData
+  getLatestSensorData,
+  getFanRuntime
 };
 

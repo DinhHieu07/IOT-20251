@@ -90,6 +90,14 @@ bool manualFan2State = false; // Trạng thái quạt 2 khi điều khiển th�
 unsigned long manualControlTimeout = 0; // Thời gian hết hạn điều khiển thủ công (0 = không giới hạn)
 const unsigned long MANUAL_CONTROL_DURATION = 300000; // 5 phút (300000ms) - tự động quay lại chế độ tự động
 
+// ================= ĐẾM THỜI GIAN HOẠT ĐỘNG QUẠT =================
+unsigned long fan1StartTime = 0;      // Thời điểm quạt 1 bật
+unsigned long fan2StartTime = 0;      // Thời điểm quạt 2 bật
+unsigned long fan1TotalRuntime = 0;   // Tổng thời gian quạt 1 đã chạy (ms)
+unsigned long fan2TotalRuntime = 0;   // Tổng thời gian quạt 2 đã chạy (ms)
+bool fan1WasOn = false;               // Trạng thái quạt 1 ở lần loop trước
+bool fan2WasOn = false;               // Trạng thái quạt 2 ở lần loop trước
+
 // Thông số MQ135 (Air Quality - CO2)
 // Công thức: PPM = a * (Rs/R0)^b
 // Khi ratio = 1.0 (không khí sạch), PPM ≈ 400 (CO2 trong không khí bình thường)
@@ -490,25 +498,79 @@ void loop()
   }
   
   // Điều khiển phần cứng
+  bool currentFan1State = false;
+  bool currentFan2State = false;
+  
   if (manualControl) {
     // Chế độ điều khiển thủ công từ server
-    digitalWrite(RELAY_PIN_1, manualFan1State ? RELAY_ON : RELAY_OFF);
-    digitalWrite(RELAY_PIN_2, manualFan2State ? RELAY_ON : RELAY_OFF);
+    currentFan1State = manualFan1State;
+    currentFan2State = manualFan2State;
+    digitalWrite(RELAY_PIN_1, currentFan1State ? RELAY_ON : RELAY_OFF);
+    digitalWrite(RELAY_PIN_2, currentFan2State ? RELAY_ON : RELAY_OFF);
   } else {
     // Chế độ tự động dựa trên cảm biến
     if (dangerLevel == 2) {
       // Nguy hiểm: Bật cả 2 quạt
+      currentFan1State = true;
+      currentFan2State = true;
       digitalWrite(RELAY_PIN_1, RELAY_ON);
       digitalWrite(RELAY_PIN_2, RELAY_ON);
     } else if (dangerLevel == 1) {
       // Trung bình: Bật 1 quạt (quạt 1)
+      currentFan1State = true;
+      currentFan2State = false;
       digitalWrite(RELAY_PIN_1, RELAY_ON);
       digitalWrite(RELAY_PIN_2, RELAY_OFF);
     } else {
       // An toàn: Tắt cả 2 quạt
+      currentFan1State = false;
+      currentFan2State = false;
       digitalWrite(RELAY_PIN_1, RELAY_OFF);
       digitalWrite(RELAY_PIN_2, RELAY_OFF);
     }
+  }
+
+  // ================= ĐẾM THỜI GIAN HOẠT ĐỘNG QUẠT =================
+  unsigned long currentTime = millis();
+  
+  // Xử lý quạt 1
+  if (currentFan1State && !fan1WasOn) {
+    // Quạt 1 vừa bật
+    fan1StartTime = currentTime;
+    fan1WasOn = true;
+    Serial.println("🔄 Fan 1: ON - Bắt đầu đếm thời gian");
+  } else if (!currentFan1State && fan1WasOn) {
+    // Quạt 1 vừa tắt
+    unsigned long runtime = currentTime - fan1StartTime;
+    fan1TotalRuntime += runtime;
+    fan1WasOn = false;
+    Serial.printf("⏱️ Fan 1: OFF - Đã chạy: %lu ms (Tổng: %lu ms = %.2f giờ)\n", 
+                  runtime, fan1TotalRuntime, fan1TotalRuntime / 3600000.0);
+  }
+  
+  // Xử lý quạt 2
+  if (currentFan2State && !fan2WasOn) {
+    // Quạt 2 vừa bật
+    fan2StartTime = currentTime;
+    fan2WasOn = true;
+    Serial.println("🔄 Fan 2: ON - Bắt đầu đếm thời gian");
+  } else if (!currentFan2State && fan2WasOn) {
+    // Quạt 2 vừa tắt
+    unsigned long runtime = currentTime - fan2StartTime;
+    fan2TotalRuntime += runtime;
+    fan2WasOn = false;
+    Serial.printf("⏱️ Fan 2: OFF - Đã chạy: %lu ms (Tổng: %lu ms = %.2f giờ)\n", 
+                  runtime, fan2TotalRuntime, fan2TotalRuntime / 3600000.0);
+  }
+  
+  // Tính thời gian chạy hiện tại (nếu đang chạy)
+  unsigned long fan1CurrentRuntime = 0;
+  unsigned long fan2CurrentRuntime = 0;
+  if (currentFan1State && fan1WasOn) {
+    fan1CurrentRuntime = currentTime - fan1StartTime;
+  }
+  if (currentFan2State && fan2WasOn) {
+    fan2CurrentRuntime = currentTime - fan2StartTime;
   }
 
   // 5. Hiển thị & Gửi dữ liệu
@@ -560,27 +622,25 @@ void loop()
     msg += "\"ppm\":" + String(mq135_ppm, 2);
     msg += "},";
     msg += "\"danger_level\":" + String(dangerLevel) + ","; // 0 = An toàn, 1 = Trung bình, 2 = Nguy hiểm
-    // Trạng thái quạt thực tế (có thể bị override bởi điều khiển thủ công)
-    bool actualFan1 = manualControl ? manualFan1State : (dangerLevel >= 1);
-    bool actualFan2 = manualControl ? manualFan2State : (dangerLevel >= 2);
-    msg += "\"fan1\":" + String(actualFan1 ? 1 : 0) + ",";
-    msg += "\"fan2\":" + String(actualFan2 ? 1 : 0) + ",";
+    // Trạng thái quạt thực tế - dùng cùng biến với logic đếm thời gian
+    msg += "\"fan1\":" + String(currentFan1State ? 1 : 0) + ",";
+    msg += "\"fan2\":" + String(currentFan2State ? 1 : 0) + ",";
     msg += "\"manual_control\":" + String(manualControl ? 1 : 0) + ","; // 1 = Thủ công, 0 = Tự động
     msg += "\"fan_status\":\"";
     if (manualControl) {
       // Hiển thị trạng thái thủ công
-      if (actualFan1 && actualFan2) {
+      if (currentFan1State && currentFan2State) {
         msg += "MANUAL_2_FANS_ON";
-      } else if (actualFan1) {
+      } else if (currentFan1State) {
         msg += "MANUAL_1_FAN_ON";
       } else {
         msg += "MANUAL_OFF";
       }
     } else {
       // Hiển thị trạng thái tự động
-      if (dangerLevel == 2) {
+      if (currentFan1State && currentFan2State) {
         msg += "AUTO_2_FANS_ON";
-      } else if (dangerLevel == 1) {
+      } else if (currentFan1State) {
         msg += "AUTO_1_FAN_ON";
       } else {
         msg += "AUTO_OFF";
@@ -588,7 +648,14 @@ void loop()
     }
     msg += "\",";
     msg += "\"reason\":\"" + reason + "\",";
-    msg += "\"timestamp\":" + String(millis());
+    msg += "\"timestamp\":" + String(millis()) + ",";
+    // Thêm thời gian hoạt động quạt
+    msg += "\"fan_runtime\":{";
+    msg += "\"fan1_total_ms\":" + String(fan1TotalRuntime) + ",";
+    msg += "\"fan1_current_ms\":" + String(fan1CurrentRuntime) + ",";
+    msg += "\"fan2_total_ms\":" + String(fan2TotalRuntime) + ",";
+    msg += "\"fan2_current_ms\":" + String(fan2CurrentRuntime);
+    msg += "}";
     msg += "}";
 
     // Publish lên MQTT

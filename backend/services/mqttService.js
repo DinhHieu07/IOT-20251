@@ -122,12 +122,25 @@ class MQTTService {
           location: 'Chưa xác định',
           status: 'online',
           lastSeen: new Date(),
+          fanRuntime: {
+            fan1TotalMs: 0,
+            fan2TotalMs: 0,
+            lastUpdated: new Date()
+          }
         });
         console.log(`[MQTT] Đã tạo device mới: ${device.macAddress}`);
       } else {
         // Cập nhật trạng thái device
         device.status = 'online';
         device.lastSeen = new Date();
+        
+        // Cập nhật thời gian hoạt động quạt nếu có trong data
+        if (data.fan_runtime) {
+          device.fanRuntime.fan1TotalMs = data.fan_runtime.fan1_total_ms || device.fanRuntime.fan1TotalMs;
+          device.fanRuntime.fan2TotalMs = data.fan_runtime.fan2_total_ms || device.fanRuntime.fan2TotalMs;
+          device.fanRuntime.lastUpdated = new Date();
+        }
+        
         await device.save();
       }
 
