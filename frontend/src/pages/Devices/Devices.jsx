@@ -122,28 +122,94 @@ const Devices = () => {
         </CardHeader>
         <CardContent className="space-y-8">
           
-          {/* Illustration Area */}
-          <div className="relative w-full h-64 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="text-slate-400 text-lg font-medium">Khu vực hình minh họa 2D/3D</span>
-            </div>
+          {/* Illustration Area - 2D Image Map */}
+          <div className="relative w-full h-[400px] bg-slate-100 rounded-lg border border-slate-200 overflow-hidden group">
+            {/* Background Image - Thay ảnh sơ đồ của bạn vào src bên dưới */}
+            <img 
+              src="src/res/breadboard.webp" 
+              alt="Device Diagram" 
+              className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+            />
             
-            {/* Interactive Hotspots (Mockup) */}
-            {/* Sensor Group Hotspot */}
-            <div 
-              className="absolute top-1/4 left-1/4 w-24 h-24 bg-blue-500/20 border-2 border-blue-500 rounded-full cursor-pointer hover:bg-blue-500/40 transition-all flex items-center justify-center group"
-              onClick={() => handleIllustrationClick('sensors')}
-            >
-              <span className="text-xs font-bold text-blue-700 bg-white/80 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Cảm biến</span>
+            <div className="absolute top-4 left-4 bg-white/90 px-3 py-1 rounded shadow-sm text-sm font-medium text-slate-600">
+              Chế độ xem 2D
             </div>
 
-            {/* Fan Group Hotspot */}
+            {/* --- HOTSPOTS --- */}
+            
+            {/* MQ2 Sensor (Blue) */}
             <div 
-              className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-green-500/20 border-2 border-green-500 rounded-lg cursor-pointer hover:bg-green-500/40 transition-all flex items-center justify-center group"
+              className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => handleIllustrationClick('sensors')}
+            >
+              <div className="w-20 h-20 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
+                MQ2
+              </div>
+              <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Cảm biến Gas
+              </div>
+            </div>
+
+            {/* MQ7 Sensor (Orange) */}
+            <div 
+              className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => handleIllustrationClick('sensors')}
+            >
+              <div className="w-20 h-20 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
+                MQ7
+              </div>
+              <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Cảm biến CO
+              </div>
+            </div>
+
+            {/* MQ135 Sensor (Gray) */}
+            <div 
+              className="absolute top-[20%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => handleIllustrationClick('sensors')}
+            >
+              <div className="w-20 h-20 rounded-full bg-gray-500 shadow-lg shadow-gray-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
+                135
+              </div>
+              <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Chất lượng KK
+              </div>
+            </div>
+
+            {/* Fan 1 */}
+            <div 
+              className="absolute bottom-[10%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
               onClick={() => handleIllustrationClick('fans')}
             >
-              <span className="text-xs font-bold text-green-700 bg-white/80 px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Quạt làm mát</span>
+              <div className={`w-16 h-16 rounded-lg border-2 flex items-center justify-center shadow-lg transition-colors ${
+                fans[0].status === 'on' 
+                  ? 'bg-green-100 border-green-500 text-green-600' 
+                  : 'bg-red-100 border-red-500 text-red-600 animate-pulse'
+              }`}>
+                <Fan className="w-8 h-8" />
+              </div>
+              <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Quạt thông gió 1
+              </div>
             </div>
+
+            {/* Fan 2 */}
+            <div 
+              className="absolute bottom-[10%] right-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => handleIllustrationClick('fans')}
+            >
+              <div className={`w-16 h-16 rounded-lg border-2 flex items-center justify-center shadow-lg transition-colors ${
+                fans[1].status === 'on' 
+                  ? 'bg-green-100 border-green-500 text-green-600' 
+                  : 'bg-red-100 border-red-500 text-red-600 animate-pulse'
+              }`}>
+                <Fan className="w-8 h-8" />
+              </div>
+              <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Quạt thông gió 2
+              </div>
+            </div>
+
           </div>
 
           {/* Accordions */}
