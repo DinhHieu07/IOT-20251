@@ -22,12 +22,12 @@ const Layout = ({ children }) => {
           <div className="flex h-16 items-center justify-between">
             <h1 className="text-xl font-semibold">Hệ thống Quạt Thông gió Hầm Gửi xe</h1>
             <nav className="flex items-center gap-6">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-foreground/80",
-                  location.pathname === '/' 
-                    ? "text-foreground" 
+                  location.pathname === '/'
+                    ? "text-foreground"
                     : "text-muted-foreground"
                 )}
               >
@@ -35,28 +35,45 @@ const Layout = ({ children }) => {
               </Link>
               {isAuthenticated && (
                 <>
-                  <Link 
-                    to="/dashboard" 
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-foreground/80",
-                      location.pathname === '/dashboard' 
-                        ? "text-foreground" 
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link 
-                    to="/devices" 
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-foreground/80",
-                      location.pathname === '/devices' 
-                        ? "text-foreground" 
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Thiết bị
-                  </Link>
+                  {user && (user.role === 'admin' && (
+                    <Link
+                      to="/dashboard"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-foreground/80",
+                        location.pathname === '/dashboard'
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Dashboard
+                    </Link>
+                  ))}
+                  {user && user.role === 'admin' && (
+                    <Link
+                      to="/devices"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-foreground/80",
+                        location.pathname === '/devices'
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Thiết bị
+                    </Link>
+                  )}
+                  {user && user.role === 'admin' && (
+                    <Link
+                      to="/users"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-foreground/80",
+                        location.pathname === '/users'
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Tài khoản
+                    </Link>
+                  )}
                   {user && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-4 w-4" />
@@ -75,12 +92,12 @@ const Layout = ({ children }) => {
                 </>
               )}
               {!isAuthenticated && (
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-foreground/80",
-                    location.pathname === '/login' 
-                      ? "text-foreground" 
+                    location.pathname === '/login'
+                      ? "text-foreground"
                       : "text-muted-foreground"
                   )}
                 >

@@ -12,7 +12,8 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.2.0",
-    "lucide-react": "^0.303.0"
+    "lucide-react": "^0.303.0",
+    "@radix-ui/react-select": "^2.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
