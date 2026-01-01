@@ -5,6 +5,7 @@ import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Devices from './pages/Devices/Devices';
+import Notifications from './pages/Notifications/Notifications';
 
 function App() {
   return (
@@ -34,6 +35,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Devices />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Notifications />
             </Layout>
           </ProtectedRoute>
         }

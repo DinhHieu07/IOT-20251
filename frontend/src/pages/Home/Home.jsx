@@ -51,8 +51,10 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button asChild size="lg" className="text-base">
               <Link to="/dashboard">
-                Xem Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <div className="flex items-center">
+                  Xem Dashboard 
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="text-base">
@@ -195,8 +197,10 @@ const Home = () => {
             <CardContent>
               <Button asChild size="lg" className="text-base">
                 <Link to="/dashboard">
+                  <div className="flex items-center">
                   Bắt đầu ngay
                   <ArrowRight className="ml-2 h-4 w-4" />
+                </div>
                 </Link>
               </Button>
             </CardContent>

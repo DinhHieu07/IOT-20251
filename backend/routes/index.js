@@ -3,11 +3,13 @@ const router = express.Router();
 
 // Import route modules
 const authRoutes = require('./auth.routes');
+// const notificationRoutes = require('./notification.routes');
 // const deviceRoutes = require('./device.routes');
 // const sensorRoutes = require('./sensor.routes');
 
 // Route definitions
 router.use('/auth', authRoutes);
+// router.use('/notifications', notificationRoutes);
 // router.use('/devices', deviceRoutes);
 // router.use('/sensors', sensorRoutes);
 

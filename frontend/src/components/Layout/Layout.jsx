@@ -4,6 +4,8 @@ import { ThemeToggle } from '../ui/theme-toggle';
 import { Button } from '../ui/button';
 import { LogOut, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { SidebarProvider, SidebarTrigger } from '../ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -14,6 +16,23 @@ const Layout = ({ children }) => {
     logout();
     navigate('/login');
   };
+
+  if (isAuthenticated) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <main className="w-full flex flex-col min-h-screen bg-background">
+            <div className="p-4 border-b flex items-center justify-between bg-card">
+                <SidebarTrigger />
+                <ThemeToggle />
+            </div>
+            <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                {children}
+            </div>
+        </main>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -33,47 +52,6 @@ const Layout = ({ children }) => {
               >
                 Trang chủ
               </Link>
-              {isAuthenticated && (
-                <>
-                  <Link 
-                    to="/dashboard" 
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-foreground/80",
-                      location.pathname === '/dashboard' 
-                        ? "text-foreground" 
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link 
-                    to="/devices" 
-                    className={cn(
-                      "text-sm font-medium transition-colors hover:text-foreground/80",
-                      location.pathname === '/devices' 
-                        ? "text-foreground" 
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Thiết bị
-                  </Link>
-                  {user && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span>{user.username}</span>
-                    </div>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-sm"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Đăng xuất
-                  </Button>
-                </>
-              )}
               {!isAuthenticated && (
                 <Link 
                   to="/login" 
