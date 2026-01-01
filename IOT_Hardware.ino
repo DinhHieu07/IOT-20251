@@ -1,5 +1,6 @@
 #include <WiFi.h>
-#include <WiFiUdp.h>
+#include <PubSubClient.h>
+#include <WiFiClientSecure.h>
 #include <math.h>
 
 // ================= CẤU HÌNH WIFI =================
@@ -8,13 +9,20 @@
 const char *ssid = "Redmi Note 11 Pro";
 const char *password = "22222222";
 
-// ================= CẤU HÌNH UDP =================
-// const char* LAPTOP_IP_1 = "192.168.1.189";
-// const char *LAPTOP_IP_2 = "10.56.97.245";
-const char *LAPTOP_IP_3 = "10.62.43.245"; //D9-106
-const unsigned int LAPTOP_PORT = 5005;
+// ================= CẤU HÌNH HIVEMQ CLOUD =================
+// Thay đổi các thông tin sau theo HiveMQ Cloud của bạn:
+const char* mqtt_server = "MQTT_BROKER_URL"; // Thay bằng broker URL của bạn
+const int mqtt_port = 8883; // Port TLS (hoặc 1883 cho non-TLS)
+const char* mqtt_username = "MQTT_USERNAME"; // Nếu có authentication
+const char* mqtt_password = "MQTT_PASSWORD"; // Nếu có authentication
+const char* mqtt_client_id = "ESP32_IOT_Device_001"; // Client ID duy nhất
 
-WiFiUDP udp;
+// Topics MQTT
+const char* topic_sensor_data = "iot/sensor/data"; // Topic để gửi dữ liệu cảm biến
+const char* topic_device_control = "iot/device/control"; // Topic để nhận lệnh điều khiển
+
+WiFiClientSecure espClient;
+PubSubClient mqttClient(espClient);
 
 // ================= CẤU HÌNH CHÂN =================
 #define MQ7_PIN 34
@@ -197,56 +205,80 @@ float calculateMQ7PPM(float rs, float r0)
   return ppm;
 }
 
-// Xử lý lệnh UDP nhận được từ server
-void handleUDPCommand() {
-  int packetSize = udp.parsePacket();
-  if (packetSize > 0) {
-    char packetBuffer[256];
-    int len = udp.read(packetBuffer, 255);
-    if (len > 0) {
-      packetBuffer[len] = 0; // Null terminate
-      String command = String(packetBuffer);
-      command.trim();
+// Callback khi nhận message từ MQTT
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  // Chuyển payload thành string
+  char message[256];
+  for (int i = 0; i < length && i < 255; i++) {
+    message[i] = (char)payload[i];
+  }
+  message[length] = '\0';
+  
+  Serial.println("Received MQTT message on topic: " + String(topic));
+  Serial.println("Message: " + String(message));
+  
+  String command = String(message);
+  command.trim();
+  
+  // Parse JSON command: {"cmd":"fan_off"} hoặc {"cmd":"fan_on","fan1":1,"fan2":0} hoặc {"cmd":"auto"}
+  if (command.indexOf("\"cmd\":\"fan_off\"") >= 0 || command.indexOf("\"cmd\":\"fans_off\"") >= 0) {
+    // Lệnh tắt tất cả quạt
+    manualControl = true;
+    manualFan1State = false;
+    manualFan2State = false;
+    manualControlTimeout = millis() + MANUAL_CONTROL_DURATION;
+    Serial.println("✓ Manual control: ALL FANS OFF");
+  }
+  else if (command.indexOf("\"cmd\":\"auto\"") >= 0 || command.indexOf("\"cmd\":\"automatic\"") >= 0) {
+    // Lệnh quay lại chế độ tự động
+    manualControl = false;
+    manualControlTimeout = 0;
+    Serial.println("✓ Switched to AUTO mode");
+  }
+  else if (command.indexOf("\"cmd\":\"fan_on\"") >= 0) {
+    // Lệnh bật quạt theo chỉ định
+    manualControl = true;
+    manualControlTimeout = millis() + MANUAL_CONTROL_DURATION;
+    
+    // Parse fan1 và fan2 từ JSON
+    if (command.indexOf("\"fan1\":1") >= 0) {
+      manualFan1State = true;
+    } else if (command.indexOf("\"fan1\":0") >= 0) {
+      manualFan1State = false;
+    }
+    
+    if (command.indexOf("\"fan2\":1") >= 0) {
+      manualFan2State = true;
+    } else if (command.indexOf("\"fan2\":0") >= 0) {
+      manualFan2State = false;
+    }
+    
+    Serial.printf("✓ Manual control: FAN1=%s FAN2=%s\n", 
+                  manualFan1State ? "ON" : "OFF",
+                  manualFan2State ? "ON" : "OFF");
+  }
+}
+
+// Kết nối lại MQTT nếu mất kết nối
+void reconnectMQTT() {
+  while (!mqttClient.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    
+    // Thử kết nối với client ID
+    if (mqttClient.connect(mqtt_client_id, mqtt_username, mqtt_password)) {
+      Serial.println("connected!");
       
-      Serial.println("Received command: " + command);
-      
-      // Parse JSON command: {"cmd":"fan_off"} hoặc {"cmd":"fan_on","fan1":1,"fan2":0} hoặc {"cmd":"auto"}
-      if (command.indexOf("\"cmd\":\"fan_off\"") >= 0 || command.indexOf("\"cmd\":\"fans_off\"") >= 0) {
-        // Lệnh tắt tất cả quạt
-        manualControl = true;
-        manualFan1State = false;
-        manualFan2State = false;
-        manualControlTimeout = millis() + MANUAL_CONTROL_DURATION;
-        Serial.println("✓ Manual control: ALL FANS OFF");
+      // Subscribe topic để nhận lệnh điều khiển
+      if (mqttClient.subscribe(topic_device_control)) {
+        Serial.println("✓ Subscribed to: " + String(topic_device_control));
+      } else {
+        Serial.println("✗ Failed to subscribe");
       }
-      else if (command.indexOf("\"cmd\":\"auto\"") >= 0 || command.indexOf("\"cmd\":\"automatic\"") >= 0) {
-        // Lệnh quay lại chế độ tự động
-        manualControl = false;
-        manualControlTimeout = 0;
-        Serial.println("✓ Switched to AUTO mode");
-      }
-      else if (command.indexOf("\"cmd\":\"fan_on\"") >= 0) {
-        // Lệnh bật quạt theo chỉ định
-        manualControl = true;
-        manualControlTimeout = millis() + MANUAL_CONTROL_DURATION;
-        
-        // Parse fan1 và fan2 từ JSON
-        if (command.indexOf("\"fan1\":1") >= 0) {
-          manualFan1State = true;
-        } else if (command.indexOf("\"fan1\":0") >= 0) {
-          manualFan1State = false;
-        }
-        
-        if (command.indexOf("\"fan2\":1") >= 0) {
-          manualFan2State = true;
-        } else if (command.indexOf("\"fan2\":0") >= 0) {
-          manualFan2State = false;
-        }
-        
-        Serial.printf("✓ Manual control: FAN1=%s FAN2=%s\n", 
-                      manualFan1State ? "ON" : "OFF",
-                      manualFan2State ? "ON" : "OFF");
-      }
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
     }
   }
 }
@@ -324,12 +356,21 @@ void setup()
     Serial.println("\nWiFi OK: " + WiFi.localIP().toString());
     Serial.println("Subnet: " + WiFi.subnetMask().toString());
     Serial.println("Gateway: " + WiFi.gatewayIP().toString());
-    Serial.println("Sending to: " + String(LAPTOP_IP_3) + ":" + String(LAPTOP_PORT));
     
-    // Khởi tạo UDP để nhận lệnh từ server
-    udp.begin(LAPTOP_PORT);
-    Serial.println("UDP listening on port " + String(LAPTOP_PORT) + " for commands");
-    Serial.println("UDP ready to send and receive");
+    // Cấu hình MQTT
+    // Nếu dùng TLS (port 8883), bỏ qua certificate verification (chỉ dùng cho development)
+    // Trong production, nên dùng certificate thật
+    espClient.setInsecure(); // Bỏ qua SSL certificate verification
+    
+    mqttClient.setServer(mqtt_server, mqtt_port);
+    mqttClient.setCallback(mqttCallback);
+    mqttClient.setBufferSize(1024); // Tăng buffer size cho message lớn
+    
+    Serial.println("MQTT Server: " + String(mqtt_server) + ":" + String(mqtt_port));
+    Serial.println("MQTT Client ID: " + String(mqtt_client_id));
+    
+    // Kết nối MQTT
+    reconnectMQTT();
   }
   else
   {
@@ -491,17 +532,18 @@ void loop()
                 mq135_adc, mq135_ratio, mq135_ppm,
                 modeStr.c_str(), dangerLevel, fanStatus.c_str(), reason.c_str());
 
-  // Nhận và xử lý lệnh UDP từ server
+  // Duy trì kết nối MQTT và xử lý messages
   if (WiFi.status() == WL_CONNECTED) {
-    handleUDPCommand();
-  }
-  
-  // Gửi UDP
-  if (WiFi.status() == WL_CONNECTED)
-  {
+    if (!mqttClient.connected()) {
+      reconnectMQTT();
+    }
+    mqttClient.loop(); // Xử lý MQTT messages
+    
+    // Gửi dữ liệu cảm biến qua MQTT
     // Tạo JSON message với đầy đủ dữ liệu cảm biến
     String msg = "{";
     msg += "\"cnt\":" + String(counter) + ",";
+    msg += "\"device_id\":\"" + String(mqtt_client_id) + "\",";
     msg += "\"mq2\":{";
     msg += "\"adc\":" + String(mq2_adc) + ",";
     msg += "\"ratio\":" + String(mq2_ratio, 3) + ",";
@@ -545,36 +587,17 @@ void loop()
       }
     }
     msg += "\",";
-    msg += "\"reason\":\"" + reason + "\"";
+    msg += "\"reason\":\"" + reason + "\",";
+    msg += "\"timestamp\":" + String(millis());
     msg += "}";
 
-    // Gửi đến server
-    if (udp.beginPacket(LAPTOP_IP_3, LAPTOP_PORT))
-    {
-      int bytesWritten = udp.write((const uint8_t *)msg.c_str(), msg.length());
-      if (bytesWritten == msg.length())
-      {
-        if (udp.endPacket())
-        {
-          Serial.println("✓ Sent: " + msg);
-        }
-        else
-        {
-          Serial.println("✗ endPacket() FAILED");
-        }
-      }
-      else
-      {
-        Serial.println("✗ Write FAILED: wrote " + String(bytesWritten) + "/" + String(msg.length()) + " bytes");
-        udp.stop();
-      }
+    // Publish lên MQTT
+    if (mqttClient.publish(topic_sensor_data, msg.c_str())) {
+      Serial.println("✓ MQTT Published: " + msg);
+    } else {
+      Serial.println("✗ MQTT Publish FAILED");
     }
-    else
-    {
-      Serial.println("✗ beginPacket() FAILED");
-    }
-
-    delay(10); // Delay nhỏ sau khi gửi UDP
+    
     counter++;
   }
   else
