@@ -197,6 +197,25 @@ class MQTTService {
     return await this.publish(topic, message);
   }
 
+  // Tắt tất cả quạt
+  async turnOffAllFans(deviceId) {
+    return await this.controlDevice(deviceId, { cmd: "fan_off" });
+  }
+
+  // Bật quạt theo chỉ định
+  async turnOnFans(deviceId, fan1 = false, fan2 = false) {
+    return await this.controlDevice(deviceId, { 
+      cmd: "fan_on", 
+      fan1: fan1 ? 1 : 0, 
+      fan2: fan2 ? 1 : 0 
+    });
+  }
+
+  // Chuyển về chế độ tự động
+  async setAutoMode(deviceId) {
+    return await this.controlDevice(deviceId, { cmd: "auto" });
+  }
+
   // Ngắt kết nối
   disconnect() {
     if (this.client) {
