@@ -1,7 +1,7 @@
 {
   "name": "iot-frontend",
   "version": "1.0.0",
-  "description": "Frontend cho d? �n IoT",
+  "description": "Frontend cho dự án IoT",
   "private": true,
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

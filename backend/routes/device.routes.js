@@ -6,7 +6,8 @@ const {
   createDevice,
   updateDevice,
   deleteDevice,
-  updateDeviceStatus
+  updateDeviceStatus,
+  controlDevice
 } = require('../controllers/device.controller');
 const { authenticateToken } = require('../middleware/auth.middleware');
 const { requireAdmin } = require('../middleware/role.middleware');
@@ -28,6 +29,9 @@ router.put('/:id', requireAdmin, updateDevice);
 
 // Cập nhật trạng thái thiết bị
 router.patch('/:id/status', requireAdmin, updateDeviceStatus);
+
+// Điều khiển thiết bị
+router.post('/control', requireAdmin, controlDevice);
 
 // Xóa thiết bị
 router.delete('/:id', requireAdmin, deleteDevice);

@@ -2,6 +2,7 @@ const Device = require('../models/Device');
 const Sensor = require('../models/Sensor');
 const Threshold = require('../models/Threshold');
 const SensorData = require('../models/SensorData');
+const mqttService = require('../services/mqttService');
 const { asyncHandler } = require('../middleware/error.middleware');
 
 /**
@@ -263,12 +264,66 @@ const updateDeviceStatus = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Điều khiển thiết bị (Quạt)
+ */
+const controlDevice = asyncHandler(async (req, res) => {
+  const { deviceId, command, fan1, fan2 } = req.body;
+
+  if (!deviceId || !command) {
+    return res.status(400).json({
+      success: false,
+      message: 'Thiếu thông tin deviceId hoặc command'
+    });
+  }
+
+  const device = await Device.findById(deviceId);
+  if (!device) {
+    return res.status(404).json({
+      success: false,
+      message: 'Thiết bị không tồn tại'
+    });
+  }
+
+  try {
+    let result;
+    switch (command) {
+      case 'fan_off':
+        result = await mqttService.turnOffAllFans(device.macAddress);
+        break;
+      case 'fan_on':
+        result = await mqttService.turnOnFans(device.macAddress, fan1, fan2);
+        break;
+      case 'auto':
+        result = await mqttService.setAutoMode(device.macAddress);
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Command không hợp lệ'
+        });
+    }
+
+    res.json({
+      success: true,
+      message: 'Gửi lệnh điều khiển thành công',
+      result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi gửi lệnh điều khiển: ' + error.message
+    });
+  }
+});
+
 module.exports = {
   getAllDevices,
   getDeviceById,
   createDevice,
   updateDevice,
   deleteDevice,
-  updateDeviceStatus
+  updateDeviceStatus,
+  controlDevice
 };
 

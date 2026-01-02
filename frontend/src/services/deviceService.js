@@ -36,6 +36,17 @@ export const deviceService = {
     const response = await api.delete(`/devices/${id}`);
     return response.data;
   },
+
+  // Điều khiển thiết bị
+  control: async (deviceId, command, fan1 = false, fan2 = false) => {
+    const response = await api.post('/devices/control', {
+      deviceId,
+      command,
+      fan1,
+      fan2
+    });
+    return response.data;
+  },
 };
 
 export const thresholdService = {

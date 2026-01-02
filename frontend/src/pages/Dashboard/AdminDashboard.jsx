@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Activity, Fan, AlertTriangle, CheckCircle2, Power, Wifi } from 'lucide-react';
+import { Activity, Fan, AlertTriangle, CheckCircle2, Power, Wifi, Zap, ZapOff, Settings } from 'lucide-react';
 import PPMGauge from '../../components/ui/PPMGauge';
 import useWindowWidth from '../../hooks/useWindowWidth';
+import { useWebSocket } from '../../hooks/useWebSocket';
+import { deviceService } from '../../services/deviceService';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts"
 import {
   ChartContainer,
@@ -29,28 +31,77 @@ const chartConfig = {
 }
 
 const AdminDashboard = () => {
-  const [isConnected, setIsConnected] = useState(true);
+  const { isConnected: isSocketConnected, lastMessage } = useWebSocket();
+  const [isConnected, setIsConnected] = useState(false);
   const [fan1Status, setFan1Status] = useState(false);
   const [fan2Status, setFan2Status] = useState(false);
+  const [currentDeviceId, setCurrentDeviceId] = useState(null);
+  const [isControlling, setIsControlling] = useState(false);
   const width = useWindowWidth();
   const gaugeSize = width < 750 ? 120 : width < 1150 ? 140 : 160;
   
   // Mock data
   const [sensorData, setSensorData] = useState({
-    mq2: 450.00,
-    mq7: 15.00,
-    mq135: 65.00,
-    isSafe: true
+    mq2: 0,
+    mq7: 0,
+    mq135: 0,
+    safetyLevel: 1 // 1: Safe, 2: Warning, 3: Danger
   });
 
-  const [chartData, setChartData] = useState([
-    { time: '10:00', mq2: 400, mq7: 12, mq135: 60 },
-    { time: '10:05', mq2: 420, mq7: 14, mq135: 62 },
-    { time: '10:10', mq2: 410, mq7: 13, mq135: 61 },
-    { time: '10:15', mq2: 450, mq7: 15, mq135: 65 },
-    { time: '10:20', mq2: 480, mq7: 18, mq135: 68 },
-    { time: '10:25', mq2: 460, mq7: 16, mq135: 66 },
-  ]);
+  const [chartData, setChartData] = useState([]);
+
+  useEffect(() => {
+    setIsConnected(isSocketConnected);
+  }, [isSocketConnected]);
+
+  useEffect(() => {
+    if (lastMessage) {
+      if (lastMessage.deviceId) {
+        setCurrentDeviceId(lastMessage.deviceId);
+      }
+
+      if (lastMessage.data) {
+        const { values, systemStatus, timestamp } = lastMessage.data;
+        
+        // Update sensor data
+        setSensorData({
+          mq2: values.mq2,
+          mq7: values.mq7,
+          mq135: values.mq135,
+          safetyLevel: systemStatus.safetyLevel || 1
+        });
+
+        // Update fan status
+        setFan1Status(systemStatus.fan1Status);
+        setFan2Status(systemStatus.fan2Status);
+
+        // Update chart data
+        const timeStr = new Date(timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        setChartData(prev => {
+          const newData = [...prev, {
+            time: timeStr,
+            mq2: values.mq2,
+            mq7: values.mq7,
+            mq135: values.mq135
+          }];
+          // Keep last 20 points
+          return newData.slice(-20);
+        });
+      }
+    }
+  }, [lastMessage]);
+
+  const handleControl = async (command, f1 = false, f2 = false) => {
+    if (!currentDeviceId) return;
+    setIsControlling(true);
+    try {
+      await deviceService.control(currentDeviceId, command, f1, f2);
+    } catch (error) {
+      console.error("Control error:", error);
+    } finally {
+      setIsControlling(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -67,45 +118,132 @@ const AdminDashboard = () => {
       {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Safety Status */}
-        <Card className={`${sensorData.isSafe ? 'bg-green-500/10 border-green-500/50' : 'bg-red-500/10 border-red-500/50'}`}>
+        <Card className={`${
+          sensorData.safetyLevel === 1 ? 'bg-green-500/10 border-green-500/50' : 
+          sensorData.safetyLevel === 2 ? 'bg-yellow-500/10 border-yellow-500/50' : 
+          'bg-red-500/10 border-red-500/50'
+        } flex flex-col justify-center`}>
           <CardContent className="flex flex-col items-center justify-center p-6">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase mb-2">Mức nguy hiểm</h3>
-            <div className={`text-5xl font-bold mb-2 ${sensorData.isSafe ? 'text-green-500' : 'text-red-500'}`}>
-              {sensorData.isSafe ? '0' : '1'}
+            <h3 className="text-xl font-bold text-muted-foreground uppercase mb-4">Mức nguy hiểm</h3>
+            <div className={`text-8xl font-bold mb-4 ${
+              sensorData.safetyLevel === 1 ? 'text-green-500' : 
+              sensorData.safetyLevel === 2 ? 'text-yellow-500' : 
+              'text-red-500'
+            }`}>
+              {sensorData.safetyLevel === 1 ? '0' : sensorData.safetyLevel === 2 ? '1' : '2'}
             </div>
-            <Badge variant={sensorData.isSafe ? "outline" : "destructive"} className={sensorData.isSafe ? "text-green-500 border-green-500" : ""}>
-              {sensorData.isSafe ? "AN TOÀN" : "NGUY HIỂM"}
+            <Badge 
+              variant="outline" 
+              className={`${
+                sensorData.safetyLevel === 1 ? "text-green-500 border-green-500" : 
+                sensorData.safetyLevel === 2 ? "text-yellow-500 border-yellow-500" : 
+                "text-red-500 border-red-500"
+              } text-lg px-6 py-2`}
+            >
+              {sensorData.safetyLevel === 1 ? "AN TOÀN" : sensorData.safetyLevel === 2 ? "KHÔNG AN TOÀN" : "NGUY HIỂM"}
             </Badge>
           </CardContent>
         </Card>
 
-        {/* System Fan Status */}
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-6">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase mb-2">Trạng thái quạt</h3>
-            <div className="text-5xl font-bold mb-2 text-muted-foreground">
-              {fan1Status || fan2Status ? "ON" : "OFF"}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {fan1Status || fan2Status ? "Hệ thống đang hoạt động" : "Hệ thống đang chờ..."}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Individual Fan Status */}
-        <Card>
+        {/* Fan Control & Status (Merged) */}
+        <Card className="col-span-1 md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase">Điều khiển & Trạng thái Quạt</CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase mb-4 text-center">Chi tiết quạt</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col items-center gap-2">
-                <Fan className={`w-8 h-8 ${fan1Status ? 'text-primary animate-spin' : 'text-muted-foreground'}`} />
-                <span className="text-xs font-medium">QUẠT 1</span>
-                <Badge variant={fan1Status ? "default" : "secondary"}>{fan1Status ? "BẬT" : "TẮT"}</Badge>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+              {/* Status Section */}
+              <div className="flex flex-col items-center justify-center min-w-[150px]">
+                <div className="text-5xl font-bold mb-2 text-muted-foreground">
+                  {fan1Status || fan2Status ? "ON" : "OFF"}
+                </div>
+                <p className="text-sm text-muted-foreground text-center">
+                  {fan1Status || fan2Status ? "Hệ thống đang hoạt động" : "Hệ thống đang chờ..."}
+                </p>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <Fan className={`w-8 h-8 ${fan2Status ? 'text-primary animate-spin' : 'text-muted-foreground'}`} />
-                <span className="text-xs font-medium">QUẠT 2</span>
-                <Badge variant={fan2Status ? "default" : "secondary"}>{fan2Status ? "BẬT" : "TẮT"}</Badge>
+
+              {/* Divider */}
+              <div className="hidden md:block w-px h-24 bg-border"></div>
+
+              {/* Controls Section */}
+              <div className="flex-1 w-full grid grid-cols-2 gap-4">
+                {/* Fan 1 Control */}
+                <div className="flex flex-col items-center gap-2 p-3 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Fan className={`w-5 h-5 ${fan1Status ? 'text-primary animate-spin' : 'text-muted-foreground'}`} />
+                    <span className="font-medium">Quạt 1</span>
+                  </div>
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      size="sm" 
+                      variant={fan1Status ? "default" : "outline"} 
+                      className="flex-1"
+                      onClick={() => handleControl('fan_on', true, fan2Status)}
+                      disabled={isControlling || !currentDeviceId}
+                    >
+                      Bật
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={!fan1Status ? "secondary" : "outline"} 
+                      className="flex-1"
+                      onClick={() => handleControl('fan_on', false, fan2Status)}
+                      disabled={isControlling || !currentDeviceId}
+                    >
+                      Tắt
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Fan 2 Control */}
+                <div className="flex flex-col items-center gap-2 p-3 rounded-lg border bg-card/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Fan className={`w-5 h-5 ${fan2Status ? 'text-primary animate-spin' : 'text-muted-foreground'}`} />
+                    <span className="font-medium">Quạt 2</span>
+                  </div>
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      size="sm" 
+                      variant={fan2Status ? "default" : "outline"} 
+                      className="flex-1"
+                      onClick={() => handleControl('fan_on', fan1Status, true)}
+                      disabled={isControlling || !currentDeviceId}
+                    >
+                      Bật
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={!fan2Status ? "secondary" : "outline"} 
+                      className="flex-1"
+                      onClick={() => handleControl('fan_on', fan1Status, false)}
+                      disabled={isControlling || !currentDeviceId}
+                    >
+                      Tắt
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Global Controls */}
+                <div className="col-span-2 flex gap-3 mt-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 gap-2 border-primary/50 hover:bg-primary/10"
+                    onClick={() => handleControl('auto')}
+                    disabled={isControlling || !currentDeviceId}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Chế độ Tự động
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    className="flex-1 gap-2"
+                    onClick={() => handleControl('fan_off')}
+                    disabled={isControlling || !currentDeviceId}
+                  >
+                    <Power className="w-4 h-4" />
+                    Tắt tất cả
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

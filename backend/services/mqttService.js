@@ -8,6 +8,12 @@ class MQTTService {
     this.isConnected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
+    this.io = null;
+  }
+
+  setSocketIo(io) {
+    this.io = io;
+    console.log('[MQTT] Socket.io instance set');
   }
 
   // Kết nối đến HiveMQ Cloud
@@ -161,6 +167,17 @@ class MQTTService {
       });
 
       console.log(`[MQTT] ✓ Đã lưu dữ liệu cảm biến: ${sensorData._id}`);
+
+      // Emit realtime event
+      if (this.io) {
+        this.io.emit('sensor_update', {
+          deviceId: device._id,
+          macAddress: device.macAddress,
+          data: sensorData,
+          fanRuntime: device.fanRuntime
+        });
+        console.log('[MQTT] Emitted sensor_update event');
+      }
     } catch (error) {
       console.error('[MQTT] ✗ Lỗi xử lý dữ liệu cảm biến:', error);
     }
@@ -195,6 +212,25 @@ class MQTTService {
     };
 
     return await this.publish(topic, message);
+  }
+
+  // Tắt tất cả quạt
+  async turnOffAllFans(deviceId) {
+    return await this.controlDevice(deviceId, { cmd: "fan_off" });
+  }
+
+  // Bật quạt theo chỉ định
+  async turnOnFans(deviceId, fan1 = false, fan2 = false) {
+    return await this.controlDevice(deviceId, { 
+      cmd: "fan_on", 
+      fan1: fan1 ? 1 : 0, 
+      fan2: fan2 ? 1 : 0 
+    });
+  }
+
+  // Chuyển về chế độ tự động
+  async setAutoMode(deviceId) {
+    return await this.controlDevice(deviceId, { cmd: "auto" });
   }
 
   // Ngắt kết nối

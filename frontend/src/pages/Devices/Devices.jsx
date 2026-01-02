@@ -489,7 +489,7 @@ const Devices = () => {
                             }}
                           />
                           <div className="absolute top-4 left-4 bg-background/90 px-3 py-1 rounded shadow-sm text-sm font-medium text-muted-foreground">
-                            {device.name} - Chế độ xem 2D
+                            Chế độ xem 2D
                           </div>
 
                           {/* Sensor Hotspots */}
@@ -586,11 +586,11 @@ const Devices = () => {
                                 )}
                               </div>
                             </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-4">
+                            <AccordionContent className="px-4 pb-4 pt-[12px]">
                               <div className="grid gap-4 md:grid-cols-3">
                                 {/* Fan 1 Status */}
                                 <Card
-                                  className={`bg-card ${hl === 'fan1' ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                  className={`bg-card transition-all duration-1000 ${hl === 'fan1' ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                   ref={(el) => {
                                     if (el) {
                                       const cur = detailRefs.current[device._id] || {};
@@ -620,7 +620,7 @@ const Devices = () => {
 
                                 {/* Fan 2 Status */}
                                 <Card
-                                  className={`bg-card ${hl === 'fan2' ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                  className={`bg-card transition-all duration-1000 ${hl === 'fan2' ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                   ref={(el) => {
                                     if (el) {
                                       const cur = detailRefs.current[device._id] || {};
@@ -678,10 +678,13 @@ const Devices = () => {
                                 <span>Cảm biến</span>
                               </div>
                             </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-4">
+                            <AccordionContent className="px-4 pb-4 pt-[12px]">
                               {device.sensors && device.sensors.length > 0 ? (
                                 <div className="grid gap-4 md:grid-cols-3">
-                                  {device.sensors.map((sensor) => {
+                                  {[...device.sensors].sort((a, b) => {
+                                    const order = { 'MQ2': 1, 'MQ7': 2, 'MQ135': 3 };
+                                    return (order[a.type] || 99) - (order[b.type] || 99);
+                                  }).map((sensor) => {
                                     const sensorThreshold = device.threshold?.[sensor.type.toLowerCase()];
                                     const value = sensor.latestValue;
                                     const valueColor = value !== null && value !== undefined && sensorThreshold
@@ -694,7 +697,7 @@ const Devices = () => {
                                     return (
                                       <Card 
                                         key={sensor._id} 
-                                        className={`bg-card ${highlight ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                        className={`bg-card transition-all duration-1000 ${highlight ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                         ref={(el) => {
                                           if (el) {
                                             const cur = detailRefs.current[device._id] || {};
