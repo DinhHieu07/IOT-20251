@@ -6,6 +6,7 @@ import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Devices from './pages/Devices/Devices';
 import Notifications from './pages/Notifications/Notifications';
+import Users from './pages/Users/Users';
 
 function App() {
   return (
@@ -45,6 +46,16 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Notifications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Users />
             </Layout>
           </ProtectedRoute>
         }

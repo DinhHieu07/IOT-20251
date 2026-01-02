@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { AlertTriangle, Wifi, Info } from 'lucide-react';
+import PPMGauge from '../../components/ui/PPMGauge';
+import useWindowWidth from '../../hooks/useWindowWidth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const ViewerDashboard = () => {
   const [isConnected, setIsConnected] = useState(true);
+  const width = useWindowWidth();
+  const gaugeSize = width < 750 ? 120 : width < 1150 ? 140 : 160;
   
   // Mock data
   const [sensorData, setSensorData] = useState({
@@ -111,9 +115,9 @@ const ViewerDashboard = () => {
       <h2 className="text-xl font-semibold mt-8 mb-4">Thông số môi trường</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "Nồng độ khí Gas/LPG", value: sensorData.mq2, unit: "PPM", color: "text-blue-500" },
-          { label: "Nồng độ khí CO", value: sensorData.mq7, unit: "PPM", color: "text-orange-500" },
-          { label: "Chất lượng không khí", value: sensorData.mq135, unit: "PPM", color: "text-green-500" }
+          { label: "MQ2 - LPG/GAS", value: sensorData.mq2, unit: "PPM", max: 1000, medium: 400, danger: 800 },
+          { label: "MQ7 - CARBON MONOXIDE", value: sensorData.mq7, unit: "PPM", max: 100, medium: 30, danger: 60 },
+          { label: "MQ135 - AIR QUALITY", value: sensorData.mq135, unit: "PPM", max: 200, medium: 70, danger: 120 }
         ].map((sensor, index) => (
           <Card key={index}>
             <CardHeader className="pb-2">
@@ -121,14 +125,14 @@ const ViewerDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-center justify-center py-4">
-                {/* Placeholder for Gauge - using simple circle for now */}
-                <div className="relative w-32 h-32 flex items-center justify-center rounded-full border-8 border-muted mb-4">
-                   <div className={`text-2xl font-bold ${sensor.color}`}>
-                     {sensor.value.toFixed(2)}
-                   </div>
-                   <span className="absolute bottom-6 text-xs text-muted-foreground">{sensor.unit}</span>
-                </div>
-                <Badge variant="outline" className="text-green-500 border-green-500">BÌNH THƯỜNG</Badge>
+                <PPMGauge
+                  value={sensor.value}
+                  max={sensor.max}
+                  mediumThreshold={sensor.medium}
+                  dangerThreshold={sensor.danger}
+                  unit={sensor.unit}
+                  size={gaugeSize}
+                />
               </div>
             </CardContent>
           </Card>

@@ -30,6 +30,11 @@ export function AppSidebar() {
       icon: Server,
     },
     {
+      title: "Người dùng",
+      url: "/users",
+      icon: Users,
+    },
+    {
       title: "Lịch sử thông báo",
       url: "/notifications",
       icon: Bell,

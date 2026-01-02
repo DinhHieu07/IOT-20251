@@ -3,14 +3,18 @@ const router = express.Router();
 
 // Import route modules
 const authRoutes = require('./auth.routes');
+const deviceRoutes = require('./device.routes');
+const thresholdRoutes = require('./threshold.routes');
+const userRoutes = require('./user.routes');
 // const notificationRoutes = require('./notification.routes');
-// const deviceRoutes = require('./device.routes');
 // const sensorRoutes = require('./sensor.routes');
 
 // Route definitions
 router.use('/auth', authRoutes);
+router.use('/devices', deviceRoutes);
+router.use('/thresholds', thresholdRoutes);
+router.use('/users', userRoutes);
 // router.use('/notifications', notificationRoutes);
-// router.use('/devices', deviceRoutes);
 // router.use('/sensors', sensorRoutes);
 
 // Test route
