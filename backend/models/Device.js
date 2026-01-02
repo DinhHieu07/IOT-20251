@@ -10,6 +10,12 @@ const deviceSchema = new mongoose.Schema({
     default: 'offline' 
   },
   lastSeen: { type: Date }, // Thời điểm cuối cùng ESP32 gửi dữ liệu
+  // Thời gian hoạt động quạt (tính bằng milliseconds)
+  fanRuntime: {
+    fan1TotalMs: { type: Number, default: 0 },  // Tổng thời gian quạt 1 đã chạy
+    fan2TotalMs: { type: Number, default: 0 },  // Tổng thời gian quạt 2 đã chạy
+    lastUpdated: { type: Date, default: Date.now } // Thời điểm cập nhật cuối
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
