@@ -6,14 +6,16 @@ const authRoutes = require('./auth.routes');
 const deviceRoutes = require('./device.routes');
 const thresholdRoutes = require('./threshold.routes');
 const userRoutes = require('./user.routes');
-// const sensorRoutes = require('./sensor.routes');
+const sensorDataRoutes = require('./sensorData.routes');
+const alertRoutes = require('./alert.routes');
 
 // Route definitions
 router.use('/auth', authRoutes);
 router.use('/devices', deviceRoutes);
 router.use('/thresholds', thresholdRoutes);
 router.use('/users', userRoutes);
-// router.use('/sensors', sensorRoutes);
+router.use('/sensor-data', sensorDataRoutes);
+router.use('/alerts', alertRoutes);
 
 // Test route
 router.get('/test', (req, res) => {

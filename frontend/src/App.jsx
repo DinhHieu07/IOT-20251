@@ -6,6 +6,8 @@ import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Devices from './pages/Devices/Devices';
 import Users from './pages/Users/Users';
+import SensorHistory from './pages/SensorHistory/SensorHistory';
+import AlertHistory from './pages/AlertHistory/AlertHistory';
 
 function App() {
   return (
@@ -45,6 +47,26 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Users />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sensor-history"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SensorHistory />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/alert-history"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AlertHistory />
             </Layout>
           </ProtectedRoute>
         }

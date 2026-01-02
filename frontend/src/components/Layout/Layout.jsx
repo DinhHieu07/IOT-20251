@@ -74,6 +74,32 @@ const Layout = ({ children }) => {
                       Tài khoản
                     </Link>
                   )}
+                  {user && user.role === 'admin' && (
+                    <Link
+                      to="/sensor-history"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-foreground/80",
+                        location.pathname === '/sensor-history'
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Lịch sử cảm biến
+                    </Link>
+                  )}
+                  {user && user.role === 'admin' && (
+                    <Link
+                      to="/alert-history"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-foreground/80",
+                        location.pathname === '/alert-history'
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Lịch sử cảnh báo
+                    </Link>
+                  )}
                   {user && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-4 w-4" />

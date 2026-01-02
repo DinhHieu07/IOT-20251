@@ -200,7 +200,7 @@ const Devices = () => {
       case 'online':
         return <Badge variant="success">Đang hoạt động</Badge>;
       case 'offline':
-        return <Badge variant="secondary">Offline</Badge>;
+        return <Badge variant="secondary">Ngừng hoạt động</Badge>;
       case 'maintenance':
         return <Badge variant="warning">Bảo trì</Badge>;
       default:
@@ -348,7 +348,7 @@ const Devices = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="online">Đang hoạt động</SelectItem>
-                              <SelectItem value="offline">Offline</SelectItem>
+                              <SelectItem value="offline">Ngừng hoạt động</SelectItem>
                               <SelectItem value="maintenance">Bảo trì</SelectItem>
                             </SelectContent>
                           </Select>
@@ -570,7 +570,7 @@ const Devices = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="offline">Offline</SelectItem>
+                    <SelectItem value="offline">Ngừng hoạt động</SelectItem>
                     <SelectItem value="online">Đang hoạt động</SelectItem>
                     <SelectItem value="maintenance">Bảo trì</SelectItem>
                   </SelectContent>
