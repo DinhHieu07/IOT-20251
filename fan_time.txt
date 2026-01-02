@@ -1,0 +1,13 @@
+esp32: thêm dữ liệu gửi đi:
+- fan1_total_ms và fan2_total_ms: đếm tổng số thơì gian đã chạy của 2 quạt
+- fan1_current_ms và fan2_current_ms: đếm thời gian chạy tức thời của 2 quạt
+
+Cơ chế hoạt động: khi quạt chưa chạy, current về 0, khi quạt bắt đầu chạy, current bắt đầu đếm thời gian liên tục, đến khi quạt dừng thì cộng hết current vào total rồi reset current về 0
+
+backend: thêm tính năng xem thời gian thiết bị:
+
+- Database: Thêm field fanRuntime trong Device model
+- MQTT Service: Lưu thời gian hoạt động từ ESP32 vào database
+- API: Thêm endpoint GET /api/devices/:id/fan-runtime để xem thời gian hoạt động
+
+Kết quả: Khi ESP32 gửi dữ liệu có fan_runtime, backend tự động cập nhật vào database và có thể truy vấn qua API.
