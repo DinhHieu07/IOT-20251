@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -42,6 +42,11 @@ const Devices = () => {
     mq135: { warning: 700, danger: 1000 },
   });
   const sensorRefs = useRef({});
+  const detailRefs = useRef({});
+  const [deviceDetails, setDeviceDetails] = useState({});
+  const [fanLoadingId, setFanLoadingId] = useState(null);
+  const [nestedAccordions, setNestedAccordions] = useState({}); // per device: 'fans' | 'sensors'
+  const [highlightTargets, setHighlightTargets] = useState({}); // per device: 'mq2' | 'mq7' | 'mq135' | 'fan1' | 'fan2'
 
   const queryClient = useQueryClient();
 
@@ -184,11 +189,18 @@ const Devices = () => {
     updateStatusMutation.mutate({ id, status: newStatus });
   };
 
-  const handleIllustrationClick = (sensorType) => {
-    const ref = sensorRefs.current[sensorType];
+  const handleIllustrationClick = (deviceId, target) => {
+    const section = target.startsWith('mq') ? 'sensors' : 'fans';
+    setNestedAccordions((prev) => ({ ...prev, [deviceId]: section }));
+    setHighlightTargets((prev) => ({ ...prev, [deviceId]: target }));
+    const ref = detailRefs.current[deviceId]?.[target];
     if (ref) {
       ref.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    // Clear highlight after 2.5s
+    setTimeout(() => {
+      setHighlightTargets((prev) => ({ ...prev, [deviceId]: null }));
+    }, 2500);
   };
 
   const getStatusBadge = (status) => {
@@ -286,6 +298,32 @@ const Devices = () => {
 
   const devices = data?.data || [];
 
+  // Fetch device details (includes latest systemStatus) when accordion opens
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!activeAccordion) return;
+      try {
+        setFanLoadingId(activeAccordion);
+        const res = await deviceService.getById(activeAccordion);
+        // res.data: { success, data }
+        setDeviceDetails((prev) => ({ ...prev, [activeAccordion]: res.data }));
+      } catch (e) {
+        // swallow error; UI will show runtime from device list even without status
+      } finally {
+        setFanLoadingId(null);
+      }
+    };
+    fetchDetails();
+  }, [activeAccordion]);
+
+  const formatMsToReadable = (ms) => {
+    if (!ms || ms <= 0) return '0 phút';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours} giờ ${minutes} phút`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -330,8 +368,8 @@ const Devices = () => {
           {devices.map((device) => {
             const safetyLevel = getSafetyLevel(device.sensors, device.threshold);
             return (
-              <AccordionItem key={device._id} value={device._id} className="border rounded-lg overflow-hidden bg-white">
-                <AccordionTrigger className="px-6 hover:no-underline bg-slate-50 hover:bg-slate-100 py-4">
+              <AccordionItem key={device._id} value={device._id} className="border rounded-lg overflow-hidden bg-card">
+                <AccordionTrigger className="px-6 hover:no-underline bg-muted hover:bg-muted/80 py-4">
                   <div className="flex items-center justify-between w-full mr-4 gap-4">
                     <div className="flex items-center gap-3">
                       <div className="flex flex-col items-start gap-1">
@@ -353,7 +391,7 @@ const Devices = () => {
                   </div>
                 </AccordionTrigger>
 
-                <AccordionContent className="px-6 pt-6 pb-6 bg-white space-y-6">
+                <AccordionContent className="px-6 pt-6 pb-6 bg-card space-y-6">
                   {/* Device Controls */}
                   <div className="flex items-center justify-between pb-4 border-b">
                     <div className="flex items-center gap-2">
@@ -405,164 +443,316 @@ const Devices = () => {
                     </div>
                   </div>
 
-                  {/* Safety Level Indicator */}
-                  <div className="p-4 rounded-lg border border-border bg-muted/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Gauge className="h-5 w-5" />
-                        <span className="font-medium">Mức an toàn:</span>
-                      </div>
-                      <Badge
-                        className={
-                          safetyLevel === 3
-                            ? 'bg-red-600'
-                            : safetyLevel === 2
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-green-600'
-                        }
-                      >
-                        {safetyLevel === 3
-                          ? 'Nguy hiểm'
-                          : safetyLevel === 2
-                          ? 'Cảnh báo'
-                          : 'An toàn'}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Illustration Area - 2D Device Diagram */}
-                  <div className="relative w-full h-[350px] bg-slate-100 rounded-lg border border-slate-200 overflow-hidden group">
-                    <img 
-                      src="/src/res/breadboard.webp" 
-                      alt={`${device.name} Diagram`}
-                      className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                    
-                    <div className="absolute top-4 left-4 bg-white/90 px-3 py-1 rounded shadow-sm text-sm font-medium text-slate-600">
-                      {device.name} - Chế độ xem 2D
-                    </div>
-
-                    {/* Sensor Hotspots */}
-                    {device.sensors?.length > 0 && (
+                  {/* Precompute status for hotspots/accordions */}
+                  {(() => {
+                    const details = deviceDetails[device._id]?.data;
+                    const statusSource = details?.sensors?.find((s) => s.systemStatus) || null;
+                    const fan1On = statusSource?.systemStatus?.fan1Status ?? false;
+                    const fan2On = statusSource?.systemStatus?.fan2Status ?? false;
+                    const runtime = device.fanRuntime || {};
+                    const hl = highlightTargets[device._id];
+                    return (
                       <>
-                        {/* MQ2 Sensor */}
-                        {device.sensors.some(s => s.type === 'MQ2') && (
-                          <div 
-                            className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
-                            onClick={() => handleIllustrationClick('mq2')}
-                          >
-                            <div className="w-20 h-20 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
-                              MQ2
+                        {/* Safety Level Indicator */}
+                        <div className="p-4 rounded-lg border border-border bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Gauge className="h-5 w-5" />
+                              <span className="font-medium">Mức an toàn:</span>
                             </div>
-                            <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              Cảm biến Gas
-                            </div>
-                          </div>
-                        )}
-
-                        {/* MQ7 Sensor */}
-                        {device.sensors.some(s => s.type === 'MQ7') && (
-                          <div 
-                            className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
-                            onClick={() => handleIllustrationClick('mq7')}
-                          >
-                            <div className="w-20 h-20 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
-                              MQ7
-                            </div>
-                            <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              Cảm biến CO
-                            </div>
-                          </div>
-                        )}
-
-                        {/* MQ135 Sensor */}
-                        {device.sensors.some(s => s.type === 'MQ135') && (
-                          <div 
-                            className="absolute top-[20%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
-                            onClick={() => handleIllustrationClick('mq135')}
-                          >
-                            <div className="w-20 h-20 rounded-full bg-gray-500 shadow-lg shadow-gray-500/50 flex items-center justify-center text-white font-bold border-4 border-white text-xl">
-                              135
-                            </div>
-                            <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              Chất lượng KK
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Sensors Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      Cảm biến
-                    </h3>
-                    {device.sensors && device.sensors.length > 0 ? (
-                      <div className="grid gap-4 md:grid-cols-3">
-                        {device.sensors.map((sensor) => {
-                          const sensorThreshold = device.threshold?.[sensor.type.toLowerCase()];
-                          const value = sensor.latestValue;
-                          const valueColor = value !== null && value !== undefined && sensorThreshold
-                            ? getSensorValueColor(value, sensorThreshold.warning, sensorThreshold.danger)
-                            : 'text-muted-foreground';
-
-                          return (
-                            <Card 
-                              key={sensor._id} 
-                              className="bg-slate-50"
-                              ref={(el) => {
-                                if (el) sensorRefs.current[sensor.type.toLowerCase()] = el;
-                              }}
+                            <Badge
+                              className={
+                                safetyLevel === 3
+                                  ? 'bg-red-600'
+                                  : safetyLevel === 2
+                                  ? 'bg-yellow-600 text-white'
+                                  : 'bg-green-600'
+                              }
                             >
-                              <CardHeader className="pb-2">
-                                <div className="flex justify-between items-start">
-                                  <CardTitle className="text-sm font-medium">{sensor.name || sensor.type}</CardTitle>
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`${getStatusColor(sensor.status)} text-white border-none`}
-                                  >
-                                    {sensor.status === 'normal' ? 'Bình thường' : sensor.status}
-                                  </Badge>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="space-y-3">
-                                <div className={`text-2xl font-bold ${valueColor}`}>
-                                  {value !== null && value !== undefined ? `${value.toFixed(2)}` : 'N/A'}
-                                </div>
-                                <div className="space-y-2 text-xs text-muted-foreground">
-                                  <div className="flex justify-between">
-                                    <span>Cập nhật:</span>
-                                    <span>{sensor.lastUpdated ? new Date(sensor.lastUpdated).toLocaleTimeString('vi-VN') : 'N/A'}</span>
+                              {safetyLevel === 3
+                                ? 'Nguy hiểm'
+                                : safetyLevel === 2
+                                ? 'Cảnh báo'
+                                : 'An toàn'}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Illustration Area - 2D Device Diagram */}
+                        <div className="relative w-full h-[350px] bg-muted rounded-lg border border-border overflow-hidden group">
+                          <img 
+                            src="/src/res/breadboard.webp" 
+                            alt={`${device.name} Diagram`}
+                            className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute top-4 left-4 bg-background/90 px-3 py-1 rounded shadow-sm text-sm font-medium text-muted-foreground">
+                            {device.name} - Chế độ xem 2D
+                          </div>
+
+                          {/* Sensor Hotspots */}
+                          {device.sensors?.length > 0 && (
+                            <>
+                              {/* MQ2 Sensor */}
+                              {device.sensors.some(s => s.type === 'MQ2') && (
+                                <div 
+                                  className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+                                  onClick={() => handleIllustrationClick(device._id, 'mq2')}
+                                >
+                                  <div className="w-20 h-20 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl">
+                                    MQ2
                                   </div>
-                                  <div className="flex justify-between items-center">
-                                    <span>Ngưỡng:</span>
-                                    {sensorThreshold ? (
-                                      <span><span className="text-yellow-600">{sensorThreshold.warning}</span>/<span className="text-red-600">{sensorThreshold.danger}</span></span>
-                                    ) : (
-                                      <span>N/A</span>
-                                    )}
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Loại cảm biến:</span>
-                                    <span>{sensor.type}</span>
+                                  <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    Cảm biến Gas
                                   </div>
                                 </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        Không có cảm biến được kết nối
-                      </div>
-                    )}
-                  </div>
+                              )}
+
+                              {/* MQ7 Sensor */}
+                              {device.sensors.some(s => s.type === 'MQ7') && (
+                                <div 
+                                  className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+                                  onClick={() => handleIllustrationClick(device._id, 'mq7')}
+                                >
+                                  <div className="w-20 h-20 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl">
+                                    MQ7
+                                  </div>
+                                  <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    Cảm biến CO
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* MQ135 Sensor */}
+                              {device.sensors.some(s => s.type === 'MQ135') && (
+                                <div 
+                                  className="absolute top-[20%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+                                  onClick={() => handleIllustrationClick(device._id, 'mq135')}
+                                >
+                                  <div className="w-20 h-20 rounded-full bg-gray-500 shadow-lg shadow-gray-500/50 flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl">
+                                    135
+                                  </div>
+                                  <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    Chất lượng KK
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* Fan Hotspots */}
+                          <div 
+                            className="absolute top-[70%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+                            onClick={() => handleIllustrationClick(device._id, 'fan1')}
+                          >
+                            <div className={`w-20 h-20 rounded-full ${fan1On ? 'bg-green-500' : 'bg-red-500'} shadow-lg flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl`}>
+                              FAN1
+                            </div>
+                            <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                              Quạt 1
+                            </div>
+                          </div>
+                          <div 
+                            className="absolute top-[70%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
+                            onClick={() => handleIllustrationClick(device._id, 'fan2')}
+                          >
+                            <div className={`w-20 h-20 rounded-full ${fan2On ? 'bg-green-500' : 'bg-red-500'} shadow-lg flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl`}>
+                              FAN2
+                            </div>
+                            <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                              Quạt 2
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Nested Accordions: Fans & Sensors */}
+                        <Accordion
+                          type="single"
+                          collapsible
+                          value={nestedAccordions[device._id] || ''}
+                          onValueChange={(v) => setNestedAccordions((prev) => ({ ...prev, [device._id]: v }))}
+                          className="w-full space-y-4 mt-6"
+                        >
+                          {/* Fans Accordion */}
+                          <AccordionItem value="fans" className="border rounded-lg overflow-hidden bg-card">
+                            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Fan className="h-5 w-5" />
+                                <span>Quạt</span>
+                                {fanLoadingId === device._id && (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-4 pb-4">
+                              <div className="grid gap-4 md:grid-cols-3">
+                                {/* Fan 1 Status */}
+                                <Card
+                                  className={`bg-card ${hl === 'fan1' ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                  ref={(el) => {
+                                    if (el) {
+                                      const cur = detailRefs.current[device._id] || {};
+                                      detailRefs.current[device._id] = { ...cur, fan1: el };
+                                    }
+                                  }}
+                                >
+                                  <CardHeader className="pb-2">
+                                    <div className="flex justify-between items-start">
+                                      <CardTitle className="text-sm font-medium">Quạt 1</CardTitle>
+                                      <Badge className={fan1On ? 'bg-green-600' : 'bg-red-600'}>
+                                        {fan1On ? 'BẬT' : 'TẮT'}
+                                      </Badge>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="space-y-3">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                      <span>Thời gian tổng:</span>
+                                      <span>{formatMsToReadable(runtime.fan1TotalMs || 0)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${fan1On ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                                      <span className="text-xs text-muted-foreground">Trạng thái hiện tại</span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Fan 2 Status */}
+                                <Card
+                                  className={`bg-card ${hl === 'fan2' ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                  ref={(el) => {
+                                    if (el) {
+                                      const cur = detailRefs.current[device._id] || {};
+                                      detailRefs.current[device._id] = { ...cur, fan2: el };
+                                    }
+                                  }}
+                                >
+                                  <CardHeader className="pb-2">
+                                    <div className="flex justify-between items-start">
+                                      <CardTitle className="text-sm font-medium">Quạt 2</CardTitle>
+                                      <Badge className={fan2On ? 'bg-green-600' : 'bg-red-600'}>
+                                        {fan2On ? 'BẬT' : 'TẮT'}
+                                      </Badge>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="space-y-3">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                      <span>Thời gian tổng:</span>
+                                      <span>{formatMsToReadable(runtime.fan2TotalMs || 0)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${fan2On ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                                      <span className="text-xs text-muted-foreground">Trạng thái hiện tại</span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                {/* Summary */}
+                                <Card className="bg-card">
+                                  <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm font-medium">Tổng quan</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-3 text-xs text-muted-foreground">
+                                    <div className="flex items-center justify-between">
+                                      <span>Hệ thống quạt:</span>
+                                      <Badge variant="outline" className="border-border">
+                                        {fan1On && fan2On ? '2 QUẠT BẬT' : fan1On || fan2On ? '1 QUẠT BẬT' : 'TẮT'}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span>Cập nhật:</span>
+                                      <span>{runtime.lastUpdated ? new Date(runtime.lastUpdated).toLocaleString('vi-VN') : 'N/A'}</span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+
+                          {/* Sensors Accordion */}
+                          <AccordionItem value="sensors" className="border rounded-lg overflow-hidden bg-card">
+                            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                              <div className="flex items-center gap-2">
+                                <Activity className="h-5 w-5" />
+                                <span>Cảm biến</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-4 pb-4">
+                              {device.sensors && device.sensors.length > 0 ? (
+                                <div className="grid gap-4 md:grid-cols-3">
+                                  {device.sensors.map((sensor) => {
+                                    const sensorThreshold = device.threshold?.[sensor.type.toLowerCase()];
+                                    const value = sensor.latestValue;
+                                    const valueColor = value !== null && value !== undefined && sensorThreshold
+                                      ? getSensorValueColor(value, sensorThreshold.warning, sensorThreshold.danger)
+                                      : 'text-muted-foreground';
+
+                                    const key = sensor.type.toLowerCase();
+                                    const highlight = hl === key;
+
+                                    return (
+                                      <Card 
+                                        key={sensor._id} 
+                                        className={`bg-card ${highlight ? 'ring-2 ring-primary animate-pulse' : ''}`}
+                                        ref={(el) => {
+                                          if (el) {
+                                            const cur = detailRefs.current[device._id] || {};
+                                            detailRefs.current[device._id] = { ...cur, [key]: el };
+                                          }
+                                        }}
+                                      >
+                                        <CardHeader className="pb-2">
+                                          <div className="flex justify-between items-start">
+                                            <CardTitle className="text-sm font-medium">{sensor.name || sensor.type}</CardTitle>
+                                            <Badge 
+                                              variant="outline" 
+                                              className={`${getStatusColor(sensor.status)} text-white border-none`}
+                                            >
+                                              {sensor.status === 'normal' ? 'Bình thường' : sensor.status}
+                                            </Badge>
+                                          </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-3">
+                                          <div className={`text-2xl font-bold ${valueColor}`}>
+                                            {value !== null && value !== undefined ? `${value.toFixed(2)}` : 'N/A'}
+                                          </div>
+                                          <div className="space-y-2 text-xs text-muted-foreground">
+                                            <div className="flex justify-between">
+                                              <span>Cập nhật:</span>
+                                              <span>{sensor.lastUpdated ? new Date(sensor.lastUpdated).toLocaleTimeString('vi-VN') : 'N/A'}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                              <span>Ngưỡng:</span>
+                                              {sensorThreshold ? (
+                                                <span><span className="text-yellow-600">{sensorThreshold.warning}</span>/<span className="text-red-600">{sensorThreshold.danger}</span></span>
+                                              ) : (
+                                                <span>N/A</span>
+                                              )}
+                                            </div>
+                                            <div className="flex justify-between">
+                                              <span>Loại cảm biến:</span>
+                                              <span>{sensor.type}</span>
+                                            </div>
+                                          </div>
+                                        </CardContent>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  Không có cảm biến được kết nối
+                                </div>
+                              )}
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </>
+                    );
+                  })()}
+
+                  
                 </AccordionContent>
               </AccordionItem>
             );
