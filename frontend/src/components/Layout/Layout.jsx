@@ -41,24 +41,24 @@ const Layout = ({ children }) => {
           <div className="flex h-16 items-center justify-between">
             <h1 className="text-xl font-semibold">Hệ thống Quạt Thông gió Hầm Gửi xe</h1>
             <nav className="flex items-center gap-6">
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-foreground/80",
-                  location.pathname === '/' 
-                    ? "text-foreground" 
+                  location.pathname === '/'
+                    ? "text-foreground"
                     : "text-muted-foreground"
                 )}
               >
                 Trang chủ
               </Link>
               {!isAuthenticated && (
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className={cn(
                     "text-sm font-medium transition-colors hover:text-foreground/80",
-                    location.pathname === '/login' 
-                      ? "text-foreground" 
+                    location.pathname === '/login'
+                      ? "text-foreground"
                       : "text-muted-foreground"
                   )}
                 >

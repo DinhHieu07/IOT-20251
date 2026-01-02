@@ -38,3 +38,17 @@ export const deviceService = {
   },
 };
 
+export const thresholdService = {
+  // Lấy threshold của device
+  getByDevice: async (deviceId) => {
+    const response = await api.get(`/thresholds/device/${deviceId}`);
+    return response.data;
+  },
+
+  // Cập nhật threshold
+  update: async (deviceId, thresholdData) => {
+    const response = await api.put(`/thresholds/device/${deviceId}`, thresholdData);
+    return response.data;
+  },
+};
+

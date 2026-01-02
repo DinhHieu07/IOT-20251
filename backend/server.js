@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./middleware/error.middleware');
+const mqttService = require('./services/mqttService');
 
 dotenv.config();
 
@@ -34,7 +35,26 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route không tồn tại' });
 });
 
+// Kết nối database
 connectDB();
+
+// Kết nối MQTT sau khi database đã kết nối
+setTimeout(() => {
+  mqttService.connect();
+}, 2000); // Đợi 2 giây để database kết nối xong
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n[Server] Đang tắt server...');
+  mqttService.disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n[Server] Đang tắt server...');
+  mqttService.disconnect();
+  process.exit(0);
+});
 
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại port ${PORT}`);
