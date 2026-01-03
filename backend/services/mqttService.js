@@ -11,6 +11,12 @@ class MQTTService {
     this.isConnected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 10;
+    this.io = null;
+  }
+
+  setSocketIo(io) {
+    this.io = io;
+    console.log('[MQTT] Socket.io instance set');
   }
 
   // Kết nối đến HiveMQ Cloud
@@ -193,6 +199,9 @@ class MQTTService {
 
       console.log(`[MQTT] ✓ Đã lưu dữ liệu cảm biến cho ${savedSensorData.length} sensor`);
 
+      // Emit realtime event sau khi lưu dữ liệu
+      this.emitSensorUpdate(device, sensorValues, systemStatus);
+
       // Kiểm tra và tạo alert nếu danger_level > 0
       if (data.danger_level > 0) {
         await this.createAlert(device._id, data);
@@ -283,8 +292,51 @@ class MQTTService {
       });
 
       console.log(`[MQTT] ✓ Đã tạo alert: ${alert._id} - ${message}`);
+
+      // Emit alert event qua Socket.io để FE hiển thị toast
+      if (this.io) {
+        // Populate sensor và device để gửi đầy đủ thông tin
+        const populatedAlert = await Alert.findById(alert._id)
+          .populate({
+            path: 'sensorId',
+            select: 'type unit deviceId',
+            populate: {
+              path: 'deviceId',
+              select: 'name macAddress location',
+            },
+          });
+
+        this.io.emit('alert_created', {
+          alert: populatedAlert,
+          deviceId: deviceId,
+          deviceName: populatedAlert?.sensorId?.deviceId?.name || 'Unknown',
+          sensorType: populatedAlert?.sensorId?.type || alertSensor.type,
+        });
+        console.log('[MQTT] ✓ Emitted alert_created event');
+      }
     } catch (error) {
       console.error('[MQTT] ✗ Lỗi tạo alert:', error);
+    }
+  }
+
+  // Emit sensor update event (được gọi sau khi lưu dữ liệu)
+  emitSensorUpdate(device, sensorValues, systemStatus) {
+    if (this.io) {
+      this.io.emit('sensor_update', {
+        deviceId: device._id,
+        macAddress: device.macAddress,
+        data: {
+          values: {
+            mq2: sensorValues.MQ2,
+            mq7: sensorValues.MQ7,
+            mq135: sensorValues.MQ135,
+          },
+          systemStatus: systemStatus,
+          timestamp: new Date(),
+        },
+        fanRuntime: device.fanRuntime
+      });
+      console.log('[MQTT] ✓ Emitted sensor_update event');
     }
   }
 

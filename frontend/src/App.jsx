@@ -5,6 +5,7 @@ import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Devices from './pages/Devices/Devices';
+import Notifications from './pages/Notifications/Notifications';
 import Users from './pages/Users/Users';
 import SensorHistory from './pages/SensorHistory/SensorHistory';
 import AlertHistory from './pages/AlertHistory/AlertHistory';
@@ -37,6 +38,26 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Devices />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Notifications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <Users />
             </Layout>
           </ProtectedRoute>
         }

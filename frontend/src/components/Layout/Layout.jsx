@@ -4,6 +4,8 @@ import { ThemeToggle } from '../ui/theme-toggle';
 import { Button } from '../ui/button';
 import { LogOut, User } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { SidebarProvider, SidebarTrigger } from '../ui/sidebar';
+import { AppSidebar } from './AppSidebar';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -14,6 +16,23 @@ const Layout = ({ children }) => {
     logout();
     navigate('/login');
   };
+
+  if (isAuthenticated) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <main className="w-full flex flex-col min-h-screen bg-background">
+            <div className="p-4 border-b flex items-center justify-between bg-card">
+                <SidebarTrigger />
+                <ThemeToggle />
+            </div>
+            <div className="flex-1 p-4 sm:p-6 lg:p-8">
+                {children}
+            </div>
+        </main>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

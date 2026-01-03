@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, ArrowLeft } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -36,8 +36,11 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border">
-        <CardHeader className="space-y-1 text-center">
+      <Card className="w-full max-w-md border-border relative">
+        <Link to="/" className="absolute left-4 top-4 p-2 rounded-full hover:bg-muted transition-colors" title="Quay lại trang chủ">
+            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+        </Link>
+        <CardHeader className="space-y-1 text-center pt-12">
           <div className="flex justify-center mb-4">
             <div className="p-3 rounded-full bg-primary/10">
               <LogIn className="h-6 w-6 text-foreground" />
