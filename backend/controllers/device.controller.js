@@ -25,7 +25,7 @@ const getAllDevices = asyncHandler(async (req, res) => {
             .limit(1);
           return {
             ...sensor.toObject(),
-            latestValue: latestData?.value || null,
+            latestValue: latestData?.value !== undefined && latestData?.value !== null ? latestData.value : null,
             latestTimestamp: latestData?.timestamp || null,
           };
         })
@@ -80,7 +80,7 @@ const getDeviceById = asyncHandler(async (req, res) => {
         .limit(1);
       return {
         ...sensor.toObject(),
-        latestValue: latestData?.value || null,
+        latestValue: latestData?.value !== undefined && latestData?.value !== null ? latestData.value : null,
         latestTimestamp: latestData?.timestamp || null,
         systemStatus: latestData?.systemStatus || null,
       };

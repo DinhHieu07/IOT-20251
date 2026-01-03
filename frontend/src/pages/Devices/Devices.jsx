@@ -5,13 +5,13 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { 
-  Accordion, 
-  AccordionContent, 
-  AccordionItem, 
-  AccordionTrigger 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
 } from '../../components/ui/accordion';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -244,7 +244,7 @@ const Devices = () => {
 
   const getSafetyLevel = (sensors, threshold) => {
     if (!sensors || !threshold) return 1;
-    
+
     let maxLevel = 1;
     sensors?.forEach((sensor) => {
       if (sensor.latestValue !== null && sensor.latestValue !== undefined) {
@@ -317,10 +317,28 @@ const Devices = () => {
   }, [activeAccordion]);
 
   const formatMsToReadable = (ms) => {
-    if (!ms || ms <= 0) return '0 phút';
-    const totalSeconds = Math.floor(ms / 1000);
+    // Convert to number if it's a string
+    const numMs = typeof ms === 'string' ? parseFloat(ms) : ms;
+    
+    // Check if it's a valid number
+    if (!numMs || isNaN(numMs) || numMs <= 0) return '0 giây';
+    
+    const totalSeconds = Math.floor(numMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    // If less than 1 minute, show seconds
+    if (totalSeconds < 60) {
+      return `${seconds} giây`;
+    }
+    
+    // If less than 1 hour, show minutes and seconds
+    if (hours === 0) {
+      return `${minutes} phút ${seconds} giây`;
+    }
+    
+    // If 1 hour or more, show hours and minutes
     return `${hours} giờ ${minutes} phút`;
   };
 
@@ -406,13 +424,13 @@ const Devices = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="online">Đang hoạt động</SelectItem>
-                          <SelectItem value="offline">Offline</SelectItem>
+                          <SelectItem value="offline">Ngừng hoạt động</SelectItem>
                           <SelectItem value="maintenance">Bảo trì</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="flex gap-2">
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleOpenThresholdDialog(device)}
@@ -420,7 +438,7 @@ const Devices = () => {
                       >
                         <Settings className="h-4 w-4" />
                         Cấu hình ngưỡng
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -465,23 +483,23 @@ const Devices = () => {
                                 safetyLevel === 3
                                   ? 'bg-red-600'
                                   : safetyLevel === 2
-                                  ? 'bg-yellow-600 text-white'
-                                  : 'bg-green-600'
+                                    ? 'bg-yellow-600 text-white'
+                                    : 'bg-green-600'
                               }
                             >
                               {safetyLevel === 3
                                 ? 'Nguy hiểm'
                                 : safetyLevel === 2
-                                ? 'Cảnh báo'
-                                : 'An toàn'}
+                                  ? 'Cảnh báo'
+                                  : 'An toàn'}
                             </Badge>
                           </div>
                         </div>
 
                         {/* Illustration Area - 2D Device Diagram */}
                         <div className="relative w-full h-[350px] bg-muted rounded-lg border border-border overflow-hidden group">
-                          <img 
-                            src="/src/res/breadboard.webp" 
+                          <img
+                            src="https://res.cloudinary.com/dzljagsbi/image/upload/v1767457906/ml2twtpj3pav53jg6kpm.webp"
                             alt={`${device.name} Diagram`}
                             className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
                             onError={(e) => {
@@ -497,7 +515,7 @@ const Devices = () => {
                             <>
                               {/* MQ2 Sensor */}
                               {device.sensors.some(s => s.type === 'MQ2') && (
-                                <div 
+                                <div
                                   className="absolute top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
                                   onClick={() => handleIllustrationClick(device._id, 'mq2')}
                                 >
@@ -512,7 +530,7 @@ const Devices = () => {
 
                               {/* MQ7 Sensor */}
                               {device.sensors.some(s => s.type === 'MQ7') && (
-                                <div 
+                                <div
                                   className="absolute top-[20%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
                                   onClick={() => handleIllustrationClick(device._id, 'mq7')}
                                 >
@@ -527,12 +545,12 @@ const Devices = () => {
 
                               {/* MQ135 Sensor */}
                               {device.sensors.some(s => s.type === 'MQ135') && (
-                                <div 
+                                <div
                                   className="absolute top-[20%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
                                   onClick={() => handleIllustrationClick(device._id, 'mq135')}
                                 >
                                   <div className="w-20 h-20 rounded-full bg-gray-500 shadow-lg shadow-gray-500/50 flex items-center justify-center text-white font-bold border-4 border-white dark:border-slate-900 text-xl">
-                                    135
+                                    MQ135
                                   </div>
                                   <div className="mt-2 bg-black/75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                     Chất lượng KK
@@ -543,7 +561,7 @@ const Devices = () => {
                           )}
 
                           {/* Fan Hotspots */}
-                          <div 
+                          <div
                             className="absolute top-[70%] left-[20%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
                             onClick={() => handleIllustrationClick(device._id, 'fan1')}
                           >
@@ -554,7 +572,7 @@ const Devices = () => {
                               Quạt 1
                             </div>
                           </div>
-                          <div 
+                          <div
                             className="absolute top-[70%] left-[80%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer hover:scale-110 transition-transform"
                             onClick={() => handleIllustrationClick(device._id, 'fan2')}
                           >
@@ -588,7 +606,7 @@ const Devices = () => {
                             </AccordionTrigger>
                             <AccordionContent className="px-4 pb-4 pt-[12px]">
                               <div className="grid gap-4 md:grid-cols-3">
-                                {/* Fan 1 Status */}
+                                {/* Fan 1 Runtime */}
                                 <Card
                                   className={`bg-card transition-all duration-1000 ${hl === 'fan1' ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                   ref={(el) => {
@@ -599,26 +617,23 @@ const Devices = () => {
                                   }}
                                 >
                                   <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-start">
-                                      <CardTitle className="text-sm font-medium">Quạt 1</CardTitle>
-                                      <Badge className={fan1On ? 'bg-green-600' : 'bg-red-600'}>
-                                        {fan1On ? 'BẬT' : 'TẮT'}
-                                      </Badge>
-                                    </div>
+                                    <CardTitle className="text-sm font-medium">Quạt 1</CardTitle>
                                   </CardHeader>
                                   <CardContent className="space-y-3">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span>Thời gian tổng:</span>
-                                      <span>{formatMsToReadable(runtime.fan1TotalMs || 0)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${fan1On ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                      <span className="text-xs text-muted-foreground">Trạng thái hiện tại</span>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-muted-foreground">Tổng thời gian chạy:</span>
+                                      <span className="text-sm font-semibold">
+                                        {formatMsToReadable(
+                                          runtime?.fan1TotalMs !== undefined && runtime?.fan1TotalMs !== null 
+                                            ? runtime.fan1TotalMs 
+                                            : 0
+                                        )}
+                                      </span>
                                     </div>
                                   </CardContent>
                                 </Card>
 
-                                {/* Fan 2 Status */}
+                                {/* Fan 2 Runtime */}
                                 <Card
                                   className={`bg-card transition-all duration-1000 ${hl === 'fan2' ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                   ref={(el) => {
@@ -629,21 +644,18 @@ const Devices = () => {
                                   }}
                                 >
                                   <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-start">
-                                      <CardTitle className="text-sm font-medium">Quạt 2</CardTitle>
-                                      <Badge className={fan2On ? 'bg-green-600' : 'bg-red-600'}>
-                                        {fan2On ? 'BẬT' : 'TẮT'}
-                                      </Badge>
-                                    </div>
+                                    <CardTitle className="text-sm font-medium">Quạt 2</CardTitle>
                                   </CardHeader>
                                   <CardContent className="space-y-3">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span>Thời gian tổng:</span>
-                                      <span>{formatMsToReadable(runtime.fan2TotalMs || 0)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className={`w-2 h-2 rounded-full ${fan2On ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                                      <span className="text-xs text-muted-foreground">Trạng thái hiện tại</span>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-muted-foreground">Tổng thời gian chạy:</span>
+                                      <span className="text-sm font-semibold">
+                                        {formatMsToReadable(
+                                          runtime?.fan2TotalMs !== undefined && runtime?.fan2TotalMs !== null 
+                                            ? runtime.fan2TotalMs 
+                                            : 0
+                                        )}
+                                      </span>
                                     </div>
                                   </CardContent>
                                 </Card>
@@ -651,17 +663,20 @@ const Devices = () => {
                                 {/* Summary */}
                                 <Card className="bg-card">
                                   <CardHeader className="pb-2">
-                                    <CardTitle className="text-sm font-medium">Tổng quan</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Thông tin</CardTitle>
                                   </CardHeader>
                                   <CardContent className="space-y-3 text-xs text-muted-foreground">
                                     <div className="flex items-center justify-between">
-                                      <span>Hệ thống quạt:</span>
-                                      <Badge variant="outline" className="border-border">
-                                        {fan1On && fan2On ? '2 QUẠT BẬT' : fan1On || fan2On ? '1 QUẠT BẬT' : 'TẮT'}
-                                      </Badge>
+                                      <span>Tổng thời gian:</span>
+                                      <span className="font-semibold">
+                                        {formatMsToReadable(
+                                          (runtime?.fan1TotalMs !== undefined && runtime?.fan1TotalMs !== null ? runtime.fan1TotalMs : 0) + 
+                                          (runtime?.fan2TotalMs !== undefined && runtime?.fan2TotalMs !== null ? runtime.fan2TotalMs : 0)
+                                        )}
+                                      </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span>Cập nhật:</span>
+                                      <span>Cập nhật lần cuối:</span>
                                       <span>{runtime.lastUpdated ? new Date(runtime.lastUpdated).toLocaleString('vi-VN') : 'N/A'}</span>
                                     </div>
                                   </CardContent>
@@ -695,8 +710,8 @@ const Devices = () => {
                                     const highlight = hl === key;
 
                                     return (
-                                      <Card 
-                                        key={sensor._id} 
+                                      <Card
+                                        key={sensor._id}
                                         className={`bg-card transition-all duration-1000 ${highlight ? 'border-primary border-2 shadow-[0_0_15px_hsl(var(--primary)/0.5)] scale-[1.02]' : ''}`}
                                         ref={(el) => {
                                           if (el) {
@@ -708,8 +723,8 @@ const Devices = () => {
                                         <CardHeader className="pb-2">
                                           <div className="flex justify-between items-start">
                                             <CardTitle className="text-sm font-medium">{sensor.name || sensor.type}</CardTitle>
-                                            <Badge 
-                                              variant="outline" 
+                                            <Badge
+                                              variant="outline"
                                               className={`${getStatusColor(sensor.status)} text-white border-none`}
                                             >
                                               {sensor.status === 'normal' ? 'Bình thường' : sensor.status}
@@ -723,7 +738,7 @@ const Devices = () => {
                                           <div className="space-y-2 text-xs text-muted-foreground">
                                             <div className="flex justify-between">
                                               <span>Cập nhật:</span>
-                                              <span>{sensor.lastUpdated ? new Date(sensor.lastUpdated).toLocaleTimeString('vi-VN') : 'N/A'}</span>
+                                              <span>{sensor.latestTimestamp ? new Date(sensor.latestTimestamp).toLocaleTimeString('vi-VN') : 'N/A'}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
                                               <span>Ngưỡng:</span>
@@ -755,7 +770,7 @@ const Devices = () => {
                     );
                   })()}
 
-                  
+
                 </AccordionContent>
               </AccordionItem>
             );

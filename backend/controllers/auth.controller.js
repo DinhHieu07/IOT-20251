@@ -64,7 +64,7 @@ const login = asyncHandler(async (req, res) => {
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true, // Không cho JavaScript truy cập (chống XSS)
     secure: process.env.NODE_ENV === 'production', // Chỉ gửi qua HTTPS trong production
-    sameSite: 'None', // Chống CSRF
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax', // Chống CSRF
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
     path: '/api/auth', // Chỉ gửi cookie cho auth routes
   });
