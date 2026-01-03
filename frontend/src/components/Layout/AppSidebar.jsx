@@ -63,11 +63,11 @@ export function AppSidebar() {
       url: "/dashboard",
       icon: LayoutDashboard,
     },
-    {
-      title: "Lịch sử thông báo",
-      url: "/notifications",
-      icon: Bell,
-    },
+    // {
+    //   title: "Lịch sử thông báo",
+    //   url: "/notifications",
+    //   icon: Bell,
+    // },
   ]
 
   const items = user?.role === 'admin' ? adminItems : viewerItems
