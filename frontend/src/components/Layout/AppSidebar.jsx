@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from "../../contexts/AuthContext"
 import { Link, useLocation } from "react-router-dom"
-import { LayoutDashboard, Server, Users, Settings, LogOut, User, Bell } from "lucide-react"
+import { LayoutDashboard, Server, Users, Settings, LogOut, User, Bell, History, AlertCircle, Home } from "lucide-react"
 import { Button } from "../ui/button"
 
 export function AppSidebar() {
@@ -19,6 +19,11 @@ export function AppSidebar() {
   const location = useLocation()
 
   const adminItems = [
+    {
+      title: "Trang chủ",
+      url: "/",
+      icon: Home,
+    },
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -30,19 +35,29 @@ export function AppSidebar() {
       icon: Server,
     },
     {
-      title: "Người dùng",
+      title: "Quản lý người dùng",
       url: "/users",
       icon: Users,
     },
     {
-      title: "Lịch sử thông báo",
-      url: "/notifications",
-      icon: Bell,
+      title: "Lịch sử dữ liệu cảm biến",
+      url: "/sensor-history",
+      icon: History,
     },
+    {
+      title: "Lịch sử cảnh báo",
+      url: "/alert-history",
+      icon: AlertCircle,
+    }
     // Add more admin items if needed
   ]
 
   const viewerItems = [
+    {
+      title: "Trang chủ",
+      url: "/",
+      icon: Home,
+    },
     {
       title: "Dashboard",
       url: "/dashboard",

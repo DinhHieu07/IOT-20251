@@ -120,8 +120,9 @@ const AlertHistory = () => {
   const stats = statsData?.data || {};
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden">
+      <div className="container mx-auto ">
+        <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Lịch sử cảnh báo</h1>
           <p className="text-muted-foreground mt-2">
@@ -135,8 +136,8 @@ const AlertHistory = () => {
             <CardTitle>Bộ lọc</CardTitle>
             <CardDescription>Lọc cảnh báo theo thiết bị, mức độ và thời gian</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <CardContent className="overflow-x-hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Thiết bị</label>
                 <Select
@@ -303,68 +304,77 @@ const AlertHistory = () => {
               </div>
             ) : (
               <>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Thời gian</TableHead>
-                        <TableHead>Thiết bị</TableHead>
-                        <TableHead>Cảm biến</TableHead>
-                        <TableHead>Mức độ</TableHead>
-                        <TableHead>Thông báo</TableHead>
-                        <TableHead>Giá trị</TableHead>
-                        <TableHead>Ngưỡng</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                        <TableHead>Thao tác</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {history.map((alert) => (
-                        <TableRow key={alert._id}>
-                          <TableCell>{formatDate(alert.timestamp)}</TableCell>
-                          <TableCell>
-                            {alert.sensorId?.deviceId?.name || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {getSensorTypeBadge(alert.sensorId?.type || 'N/A')}
-                          </TableCell>
-                          <TableCell>{getAlertTypeBadge(alert.type)}</TableCell>
-                          <TableCell className="max-w-md">
-                            <p className="truncate">{alert.message || 'N/A'}</p>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {alert.sensorValue?.toFixed(2) || '0.00'} ppm
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {alert.thresholdValue?.toFixed(2) || '0.00'} ppm
-                          </TableCell>
-                          <TableCell>
-                            {alert.isResolved ? (
-                              <Badge variant="success" className="flex items-center gap-1 w-fit">
-                                <CheckCircle2 className="h-3 w-3" />
-                                Đã xử lý
-                              </Badge>
-                            ) : (
-                              <Badge variant="warning" className="flex items-center gap-1 w-fit">
-                                <AlertTriangle className="h-3 w-3" />
-                                Chưa xử lý
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant={alert.isResolved ? 'outline' : 'default'}
-                              size="sm"
-                              onClick={() => handleResolveToggle(alert._id, alert.isResolved)}
-                              disabled={updateStatusMutation.isLoading}
-                            >
-                              {alert.isResolved ? 'Đánh dấu chưa xử lý' : 'Đánh dấu đã xử lý'}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
+                  <div className="inline-block min-w-full align-middle">
+                    <div className="rounded-md border overflow-hidden">
+                      <Table className="w-full">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[110px]">Thời gian</TableHead>
+                            <TableHead className="w-[140px]">Thiết bị</TableHead>
+                            <TableHead className="w-[90px]">Cảm biến</TableHead>
+                            <TableHead className="w-[110px]">Mức độ</TableHead>
+                            <TableHead className="w-[180px] min-w-[180px]">Thông báo</TableHead>
+                            <TableHead className="w-[90px]">Giá trị</TableHead>
+                            <TableHead className="w-[90px]">Ngưỡng</TableHead>
+                            <TableHead className="w-[110px]">Trạng thái</TableHead>
+                            <TableHead className="w-[140px]">Thao tác</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {history.map((alert) => (
+                            <TableRow key={alert._id}>
+                              <TableCell className="whitespace-nowrap text-xs">{formatDate(alert.timestamp)}</TableCell>
+                              <TableCell>
+                                <div className="truncate max-w-[140px]" title={alert.sensorId?.deviceId?.name || 'N/A'}>
+                                  {alert.sensorId?.deviceId?.name || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {getSensorTypeBadge(alert.sensorId?.type || 'N/A')}
+                              </TableCell>
+                              <TableCell>{getAlertTypeBadge(alert.type)}</TableCell>
+                              <TableCell className="max-w-[180px]">
+                                <p className="truncate text-xs" title={alert.message || 'N/A'}>
+                                  {alert.message || 'N/A'}
+                                </p>
+                              </TableCell>
+                              <TableCell className="font-medium whitespace-nowrap text-xs">
+                                {alert.sensorValue?.toFixed(2) || '0.00'} ppm
+                              </TableCell>
+                              <TableCell className="text-muted-foreground whitespace-nowrap text-xs">
+                                {alert.thresholdValue?.toFixed(2) || '0.00'} ppm
+                              </TableCell>
+                              <TableCell>
+                                {alert.isResolved ? (
+                                  <Badge variant="success" className="flex items-center gap-1 w-fit text-xs">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    Đã xử lý
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="warning" className="flex items-center gap-1 w-fit text-xs">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Chưa xử lý
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant={alert.isResolved ? 'outline' : 'default'}
+                                  size="sm"
+                                  onClick={() => handleResolveToggle(alert._id, alert.isResolved)}
+                                  disabled={updateStatusMutation.isLoading}
+                                  className="whitespace-nowrap text-xs"
+                                >
+                                  {alert.isResolved ? 'Chưa xử lý' : 'Đã xử lý'}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Pagination */}
@@ -397,6 +407,7 @@ const AlertHistory = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

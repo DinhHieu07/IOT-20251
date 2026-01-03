@@ -96,7 +96,7 @@ const SensorHistory = () => {
   const pagination = historyData?.pagination || {};
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="container mx-auto">
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Lịch sử dữ liệu cảm biến</h1>

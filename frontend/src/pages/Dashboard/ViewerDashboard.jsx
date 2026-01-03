@@ -1,14 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
-import { AlertTriangle, Wifi, Info } from 'lucide-react';
+import { AlertTriangle, Wifi, Info, XCircle } from 'lucide-react';
 import PPMGauge from '../../components/ui/PPMGauge';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { toast } from 'sonner';
 
 const ViewerDashboard = () => {
-  const { isConnected: isSocketConnected, lastMessage } = useWebSocket();
+  // Handler để hiển thị toast khi nhận alert
+  const handleAlert = (alertData) => {
+    const { alert, deviceName, sensorType } = alertData;
+    
+    if (!alert) return;
+
+    const alertType = alert.type;
+    const isDanger = alertType === 'DANGER';
+    const isWarning = alertType === 'WARNING';
+
+    toast.error(isDanger ? 'Cảnh báo nguy hiểm!' : 'Cảnh báo!', {
+      description: alert.message || `${sensorType} tại ${deviceName} đã vượt ngưỡng`,
+      duration: 5000,
+      icon: isDanger ? <XCircle className="h-5 w-5 text-red-500" /> : <AlertTriangle className="h-5 w-5 text-yellow-500" />,
+    });
+  };
+
+  const { isConnected: isSocketConnected, lastMessage } = useWebSocket(handleAlert);
   const [isConnected, setIsConnected] = useState(false);
   const width = useWindowWidth();
   const gaugeSize = width < 750 ? 120 : width < 1150 ? 140 : 160;
@@ -149,9 +167,9 @@ const ViewerDashboard = () => {
       <h2 className="text-xl font-semibold mt-8 mb-4">Thông số môi trường</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "MQ2 - LPG/GAS", value: sensorData.mq2, unit: "PPM", max: 1000, medium: 400, danger: 800 },
-          { label: "MQ7 - CARBON MONOXIDE", value: sensorData.mq7, unit: "PPM", max: 100, medium: 30, danger: 60 },
-          { label: "MQ135 - AIR QUALITY", value: sensorData.mq135, unit: "PPM", max: 200, medium: 70, danger: 120 }
+          { label: "MQ2 - LPG/GAS", value: sensorData.mq2, unit: "PPM", max: 600, medium: 100, danger: 200 },
+          { label: "MQ7 - CARBON MONOXIDE", value: sensorData.mq7, unit: "PPM", max: 400, medium: 25, danger: 100 },
+          { label: "MQ135 - AIR QUALITY", value: sensorData.mq135, unit: "PPM", max: 4096, medium: 700, danger: 1000 }
         ].map((sensor, index) => (
           <Card key={index}>
             <CardHeader className="pb-2">

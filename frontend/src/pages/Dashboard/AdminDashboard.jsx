@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Activity, Fan, AlertTriangle, CheckCircle2, Power, Wifi, Zap, ZapOff, Settings } from 'lucide-react';
+import { Activity, Fan, AlertTriangle, CheckCircle2, Power, Wifi, Zap, ZapOff, Settings, RefreshCw, Loader2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import PPMGauge from '../../components/ui/PPMGauge';
 import useWindowWidth from '../../hooks/useWindowWidth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { deviceService } from '../../services/deviceService';
+import { sensorDataService } from '../../services/sensorDataService';
+import { useQuery } from 'react-query';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts"
 import {
   ChartContainer,
@@ -31,7 +34,31 @@ const chartConfig = {
 }
 
 const AdminDashboard = () => {
-  const { isConnected: isSocketConnected, lastMessage } = useWebSocket();
+  // Handler để hiển thị toast khi nhận alert
+  const handleAlert = (alertData) => {
+    const { alert, deviceName, sensorType } = alertData;
+    
+    if (!alert) return;
+
+    const alertType = alert.type;
+    const isDanger = alertType === 'DANGER';
+    const isWarning = alertType === 'WARNING';
+
+    toast.error(isDanger ? 'Cảnh báo nguy hiểm!' : 'Cảnh báo!', {
+      description: alert.message || `${sensorType} tại ${deviceName} đã vượt ngưỡng`,
+      duration: 5000,
+      icon: isDanger ? <XCircle className="h-5 w-5 text-red-500" /> : <AlertTriangle className="h-5 w-5 text-yellow-500" />,
+      action: {
+        label: 'Xem chi tiết',
+        onClick: () => {
+          // Có thể navigate đến trang alert history
+          window.location.href = '/alert-history';
+        },
+      },
+    });
+  };
+
+  const { isConnected: isSocketConnected, lastMessage } = useWebSocket(handleAlert);
   const [isConnected, setIsConnected] = useState(false);
   const [fan1Status, setFan1Status] = useState(false);
   const [fan2Status, setFan2Status] = useState(false);
@@ -49,6 +76,178 @@ const AdminDashboard = () => {
   });
 
   const [chartData, setChartData] = useState([]);
+  const [activeTimeRange, setActiveTimeRange] = useState('24h');
+  const [statsData, setStatsData] = useState({
+    '24h': { mq2: null, mq7: null, mq135: null, loading: false },
+    '7d': { mq2: null, mq7: null, mq135: null, loading: false },
+    '30d': { mq2: null, mq7: null, mq135: null, loading: false },
+  });
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [fanRatios, setFanRatios] = useState({ fan1: null, fan2: null });
+
+  // Fetch fan ratios from history data
+  const fetchFanRatios = async (timeRange) => {
+    if (!currentDeviceId) return;
+    
+    try {
+      const response = await sensorDataService.getHistory({
+        deviceId: currentDeviceId,
+        timeRange,
+        limit: 1000, // Lấy nhiều bản ghi để tính tỷ lệ chính xác
+      });
+      
+      const data = response.data || [];
+      if (data.length === 0) {
+        setFanRatios({ fan1: null, fan2: null });
+        return;
+      }
+
+      const fan1OnCount = data.filter(item => item.systemStatus?.fan1Status === true).length;
+      const fan2OnCount = data.filter(item => item.systemStatus?.fan2Status === true).length;
+      const totalCount = data.length;
+
+      setFanRatios({
+        fan1: totalCount > 0 ? (fan1OnCount / totalCount * 100) : null,
+        fan2: totalCount > 0 ? (fan2OnCount / totalCount * 100) : null,
+      });
+    } catch (error) {
+      console.error('Error fetching fan ratios:', error);
+      setFanRatios({ fan1: null, fan2: null });
+    }
+  };
+
+  // Fetch stats data
+  const fetchStats = async (timeRange, sensorType) => {
+    try {
+      const response = await sensorDataService.getStats({
+        timeRange,
+        sensorType,
+        deviceId: currentDeviceId,
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching stats for ${sensorType} (${timeRange}):`, error);
+      return { avg: 0, min: 0, max: 0, count: 0 };
+    }
+  };
+
+  const loadStats = async (timeRange) => {
+    setStatsData(prev => ({
+      ...prev,
+      [timeRange]: { ...prev[timeRange], loading: true },
+    }));
+
+    try {
+      const [mq2Stats, mq7Stats, mq135Stats] = await Promise.all([
+        fetchStats(timeRange, 'MQ2'),
+        fetchStats(timeRange, 'MQ7'),
+        fetchStats(timeRange, 'MQ135'),
+      ]);
+
+      setStatsData(prev => ({
+        ...prev,
+        [timeRange]: {
+          mq2: mq2Stats,
+          mq7: mq7Stats,
+          mq135: mq135Stats,
+          loading: false,
+        },
+      }));
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      setStatsData(prev => ({
+        ...prev,
+        [timeRange]: { ...prev[timeRange], loading: false },
+      }));
+    }
+  };
+
+  // Load stats when timeRange changes or device changes
+  useEffect(() => {
+    if (currentDeviceId) {
+      loadStats(activeTimeRange);
+      fetchFanRatios(activeTimeRange);
+    }
+  }, [activeTimeRange, currentDeviceId]);
+
+  // Load all time ranges on mount or device change
+  useEffect(() => {
+    if (currentDeviceId) {
+      loadStats('24h');
+      loadStats('7d');
+      loadStats('30d');
+    }
+  }, [currentDeviceId]);
+
+  const handleRefresh = () => {
+    loadStats(activeTimeRange);
+    fetchFanRatios(activeTimeRange);
+  };
+
+  // Render stats content for each time range
+  const renderStatsContent = (timeRange) => {
+    const stats = statsData[timeRange];
+    
+    if (!currentDeviceId) {
+      return (
+        <div className="flex items-center justify-center h-32 text-muted-foreground">
+          Chưa có thiết bị được chọn
+        </div>
+      );
+    }
+
+    if (stats.loading) {
+      return (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
+    if (!stats.mq2 || stats.mq2.count === 0) {
+      return (
+        <div className="flex items-center justify-center h-32 text-muted-foreground">
+          Không có dữ liệu trong khoảng thời gian này
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-blue-50 dark:bg-blue-950/20">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground mb-2">MQ2 (LPG)</p>
+            <p className="text-2xl font-bold">{stats.mq2.avg?.toFixed(2) || '0.00'} ppm</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Min: {stats.mq2.min?.toFixed(2) || '0.00'} | Max: {stats.mq2.max?.toFixed(2) || '0.00'}
+            </p>
+            <p className="text-xs text-muted-foreground">Số bản ghi: {stats.mq2.count || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-orange-50 dark:bg-orange-950/20">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground mb-2">MQ7 (CO)</p>
+            <p className="text-2xl font-bold">{stats.mq7.avg?.toFixed(2) || '0.00'} ppm</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Min: {stats.mq7.min?.toFixed(2) || '0.00'} | Max: {stats.mq7.max?.toFixed(2) || '0.00'}
+            </p>
+            <p className="text-xs text-muted-foreground">Số bản ghi: {stats.mq7.count || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-50 dark:bg-gray-950/20">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground mb-2">MQ135 (Air Quality)</p>
+            <p className="text-2xl font-bold">{stats.mq135.avg?.toFixed(2) || '0.00'} ppm</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Min: {stats.mq135.min?.toFixed(2) || '0.00'} | Max: {stats.mq135.max?.toFixed(2) || '0.00'}
+            </p>
+            <p className="text-xs text-muted-foreground">Số bản ghi: {stats.mq135.count || 0}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   useEffect(() => {
     setIsConnected(isSocketConnected);
@@ -253,9 +452,9 @@ const AdminDashboard = () => {
       {/* Sensor Data Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "MQ2 - LPG/GAS", value: sensorData.mq2, unit: "PPM", max: 1000, medium: 400, danger: 800 },
-          { label: "MQ7 - CARBON MONOXIDE", value: sensorData.mq7, unit: "PPM", max: 100, medium: 30, danger: 60 },
-          { label: "MQ135 - AIR QUALITY", value: sensorData.mq135, unit: "PPM", max: 200, medium: 70, danger: 120 }
+          { label: "MQ2 - LPG/GAS", value: sensorData.mq2, unit: "PPM", max: 600, medium: 100, danger: 200 },
+          { label: "MQ7 - CARBON MONOXIDE", value: sensorData.mq7, unit: "PPM", max: 400, medium: 25, danger: 100 },
+          { label: "MQ135 - AIR QUALITY", value: sensorData.mq135, unit: "PPM", max: 4096, medium: 700, danger: 1000 }
         ].map((sensor, index) => (
           <Card key={index}>
             <CardHeader className="pb-2">
@@ -343,10 +542,32 @@ const AdminDashboard = () => {
       {/* History Tabs */}
       <Card>
         <CardHeader>
-          <CardTitle>Dữ liệu trung bình</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Dữ liệu trung bình</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={statsData[activeTimeRange]?.loading || !currentDeviceId}
+            >
+              {statsData[activeTimeRange]?.loading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Làm mới
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="24h" className="w-full">
+          <Tabs 
+            value={activeTimeRange === '24h' ? '24h' : activeTimeRange === '7d' ? '7days' : '30days'}
+            onValueChange={(value) => {
+              const timeRangeMap = { '24h': '24h', '7days': '7d', '30days': '30d' };
+              setActiveTimeRange(timeRangeMap[value] || '24h');
+            }}
+            className="w-full"
+          >
             <div className="flex justify-end mb-4">
               <TabsList>
                 <TabsTrigger value="24h">24 Giờ</TabsTrigger>
@@ -354,14 +575,14 @@ const AdminDashboard = () => {
                 <TabsTrigger value="30days">30 Ngày</TabsTrigger>
               </TabsList>
             </div>
-            <TabsContent value="24h" className="flex items-center justify-center h-32 text-muted-foreground">
-              Không có dữ liệu trong khoảng thời gian này
+            <TabsContent value="24h">
+              {renderStatsContent('24h')}
             </TabsContent>
-            <TabsContent value="7days" className="flex items-center justify-center h-32 text-muted-foreground">
-              Không có dữ liệu trong khoảng thời gian này
+            <TabsContent value="7days">
+              {renderStatsContent('7d')}
             </TabsContent>
-            <TabsContent value="30days" className="flex items-center justify-center h-32 text-muted-foreground">
-              Không có dữ liệu trong khoảng thời gian này
+            <TabsContent value="30days">
+              {renderStatsContent('30d')}
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -369,24 +590,60 @@ const AdminDashboard = () => {
 
       {/* Statistics Footer */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { label: "Trung bình MQ2", value: "--" },
-          { label: "Trung bình MQ7", value: "--" },
-          { label: "Trung bình MQ135", value: "--" },
-          { label: "Tỷ lệ Quạt 1", value: "--" },
-          { label: "Tỷ lệ Quạt 2", value: "--" },
-        ].map((stat, index) => (
-          <Card key={index} className="bg-muted/50">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground uppercase mb-1">{stat.label}</p>
-              <p className="text-lg font-bold">{stat.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Trung bình MQ2</p>
+            <p className="text-lg font-bold">
+              {statsData[activeTimeRange]?.mq2?.avg !== null && statsData[activeTimeRange]?.mq2?.avg !== undefined
+                ? `${statsData[activeTimeRange].mq2.avg.toFixed(2)} ppm`
+                : '--'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Trung bình MQ7</p>
+            <p className="text-lg font-bold">
+              {statsData[activeTimeRange]?.mq7?.avg !== null && statsData[activeTimeRange]?.mq7?.avg !== undefined
+                ? `${statsData[activeTimeRange].mq7.avg.toFixed(2)} ppm`
+                : '--'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Trung bình MQ135</p>
+            <p className="text-lg font-bold">
+              {statsData[activeTimeRange]?.mq135?.avg !== null && statsData[activeTimeRange]?.mq135?.avg !== undefined
+                ? `${statsData[activeTimeRange].mq135.avg.toFixed(2)} ppm`
+                : '--'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Tỷ lệ Quạt 1</p>
+            <p className="text-lg font-bold">
+              {fanRatios.fan1 !== null && fanRatios.fan1 !== undefined
+                ? `${fanRatios.fan1.toFixed(1)}%`
+                : '--'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground uppercase mb-1">Tỷ lệ Quạt 2</p>
+            <p className="text-lg font-bold">
+              {fanRatios.fan2 !== null && fanRatios.fan2 !== undefined
+                ? `${fanRatios.fan2.toFixed(1)}%`
+                : '--'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
       
       <div className="text-center text-xs text-muted-foreground pb-4">
-        Cập nhật lần cuối: {new Date().toLocaleTimeString()} {new Date().toLocaleDateString()}
+        Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN')} {lastUpdate.toLocaleDateString('vi-VN')}
       </div>
     </div>
   );

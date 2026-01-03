@@ -63,16 +63,6 @@ function App() {
         }
       />
       <Route
-        path="/users"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Users />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/sensor-history"
         element={
           <ProtectedRoute>

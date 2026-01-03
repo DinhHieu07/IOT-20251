@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5000;
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true, // Cho phép gửi cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
 };
 
@@ -26,15 +26,28 @@ app.use(cors(corsOptions));
 
 // Socket.io setup
 const io = new Server(server, {
-  cors: corsOptions
+  cors: corsOptions,
+  transports: ['websocket', 'polling'],
 });
 
+// Log khi server sẵn sàng
 io.on('connection', (socket) => {
-  console.log(`[Socket.io] Client connected: ${socket.id}`);
+  console.log(`[Socket.io] ✓ Client connected: ${socket.id}`);
+  console.log(`[Socket.io] Total clients: ${io.sockets.sockets.size}`);
   
-  socket.on('disconnect', () => {
-    console.log(`[Socket.io] Client disconnected: ${socket.id}`);
+  socket.on('disconnect', (reason) => {
+    console.log(`[Socket.io] ✗ Client disconnected: ${socket.id}, reason: ${reason}`);
+    console.log(`[Socket.io] Remaining clients: ${io.sockets.sockets.size}`);
   });
+
+  socket.on('error', (error) => {
+    console.error(`[Socket.io] ✗ Error from client ${socket.id}:`, error);
+  });
+});
+
+// Log khi có client đang kết nối
+io.engine.on('connection_error', (err) => {
+  console.error('[Socket.io] ✗ Connection error:', err);
 });
 
 // Pass io instance to mqttService
@@ -79,6 +92,7 @@ process.on('SIGTERM', () => {
 
 server.listen(PORT, () => {
   console.log(`Server đang chạy tại port ${PORT}`);
+  console.log(`[Socket.io] Socket.io server đã sẵn sàng, chờ kết nối từ client...`);
 });
 
 module.exports = app;
