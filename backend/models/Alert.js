@@ -6,6 +6,12 @@ const alertSchema = new mongoose.Schema({
     ref: 'Sensor', 
     required: true 
   },
+
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   
   type: { 
     type: String, 

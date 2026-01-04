@@ -127,7 +127,7 @@ class MQTTService {
         // Tạo device mới nếu chưa tồn tại
         device = await Device.create({
           name: `Device ${data.device_id}`,
-          macAddress: '00:70:07:84:91:28',
+          macAddress: data.device_id, // Sử dụng device_id từ ESP32 làm MAC address
           location: 'Hai Bà Trưng, Hà Nội',
           status: 'online',
           lastSeen: new Date(),
