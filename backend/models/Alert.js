@@ -41,8 +41,4 @@ const alertSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
-// Index để query nhanh
-alertSchema.index({ sensorId: 1, timestamp: -1 });
-alertSchema.index({ isResolved: 1, timestamp: -1 });
-
 module.exports = mongoose.model('Alert', alertSchema);

@@ -24,9 +24,4 @@ const sensorDataSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
-// Tạo index để query theo thời gian nhanh hơn (VD: Lấy dữ liệu 7 ngày qua)
-sensorDataSchema.index({ sensorId: 1, timestamp: -1 });
-// Index để query theo device (thông qua sensor)
-sensorDataSchema.index({ timestamp: -1 });
-
 module.exports = mongoose.model('SensorData', sensorDataSchema);

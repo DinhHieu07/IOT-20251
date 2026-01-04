@@ -41,8 +41,4 @@ const sensorSchema = new mongoose.Schema({
   }
 });
 
-// Index để query nhanh
-sensorSchema.index({ deviceId: 1, type: 1 }); // Tìm sensor theo device và loại
-sensorSchema.index({ deviceId: 1, isActive: 1 }); // Tìm sensor active của device
-
 module.exports = mongoose.model('Sensor', sensorSchema);
