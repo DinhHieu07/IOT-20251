@@ -127,8 +127,8 @@ class MQTTService {
         // Tạo device mới nếu chưa tồn tại
         device = await Device.create({
           name: `Device ${data.device_id}`,
-          macAddress: data.device_id,
-          location: 'Chưa xác định',
+          macAddress: '00:70:07:84:91:28',
+          location: 'Hai Bà Trưng, Hà Nội',
           status: 'online',
           lastSeen: new Date(),
           fanRuntime: {
