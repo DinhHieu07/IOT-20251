@@ -351,10 +351,10 @@ const Devices = () => {
             Cấu hình và giám sát các thiết bị ESP32 và cảm biến
           </p>
         </div>
-        <Button onClick={() => handleOpenDeviceDialog()} className="gap-2">
+        {/* <Button onClick={() => handleOpenDeviceDialog()} className="gap-2">
           <Plus className="h-4 w-4" />
           Thêm thiết bị
-        </Button>
+        </Button> */}
       </div>
 
       {isLoading ? (
