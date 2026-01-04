@@ -52,7 +52,7 @@ api.interceptors.response.use(
         console.log("error", error);
 
         // Nếu lỗi 401 và chưa retry
-        if (error.response?.status === 401 && !originalRequest._retry && error.response.data.message === 'Token đã hết hạn') {
+        if (error.response?.status === 401 && !originalRequest._retry ) {
             // Nếu đang refresh thì thêm request vào queue
             console.log("test 1");
             if (isRefreshing) {
@@ -108,15 +108,6 @@ api.interceptors.response.use(
         }
 
         if (error.response?.status === 403 && error.response.data.message === 'Token không hợp lệ') {
-            // Xóa token và redirect đến login
-            tokenStorage.remove();
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
-            }
-            return Promise.reject(error);
-        }
-
-        if (error.response?.status === 401 && error.response.data.message === 'Token không được cung cấp') {
             // Xóa token và redirect đến login
             tokenStorage.remove();
             if (window.location.pathname !== '/login') {
