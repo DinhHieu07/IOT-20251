@@ -490,8 +490,8 @@ const AdminDashboard = () => {
                 <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <ReferenceLine y={400} label="TB" stroke="orange" strokeDasharray="3 3" />
-                <ReferenceLine y={800} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
+                <ReferenceLine y={100} label="TB" stroke="orange" strokeDasharray="3 3" />
+                <ReferenceLine y={200} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
                 <Area type="monotone" dataKey="mq2" stroke="var(--color-mq2)" fill="var(--color-mq2)" fillOpacity={0.4} strokeWidth={2} />
               </AreaChart>
             </ChartContainer>
@@ -510,8 +510,8 @@ const AdminDashboard = () => {
                 <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <ReferenceLine y={30} label="TB" stroke="orange" strokeDasharray="3 3" />
-                <ReferenceLine y={60} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
+                <ReferenceLine y={25} label="TB" stroke="orange" strokeDasharray="3 3" />
+                <ReferenceLine y={100} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
                 <Area type="monotone" dataKey="mq7" stroke="var(--color-mq7)" fill="var(--color-mq7)" fillOpacity={0.4} strokeWidth={2} />
               </AreaChart>
             </ChartContainer>
@@ -530,8 +530,8 @@ const AdminDashboard = () => {
                 <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <ReferenceLine y={70} label="TB" stroke="orange" strokeDasharray="3 3" />
-                <ReferenceLine y={120} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
+                <ReferenceLine y={700} label="TB" stroke="orange" strokeDasharray="3 3" />
+                <ReferenceLine y={1000} label="Nguy hiểm" stroke="red" strokeDasharray="3 3" />
                 <Area type="monotone" dataKey="mq135" stroke="var(--color-mq135)" fill="var(--color-mq135)" fillOpacity={0.4} strokeWidth={2} />
               </AreaChart>
             </ChartContainer>
