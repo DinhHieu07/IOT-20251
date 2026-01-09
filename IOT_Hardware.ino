@@ -10,16 +10,16 @@ const char *ssid = "Redmi Note 11 Pro";
 const char *password = "22222222";
 
 // ================= CẤU HÌNH HIVEMQ CLOUD =================
-// Thay đổi các thông tin sau theo HiveMQ Cloud của bạn:
-const char* mqtt_server = "MQTT_BROKER_URL"; // Thay bằng broker URL của bạn
-const int mqtt_port = 8883; // Port TLS (hoặc 1883 cho non-TLS)
-const char* mqtt_username = "MQTT_USERNAME"; // Nếu có authentication
-const char* mqtt_password = "MQTT_PASSWORD"; // Nếu có authentication
-const char* mqtt_client_id = "ESP32_IOT_Device_001"; // Client ID duy nhất
+// Thay đổi các thông tin sau theo HiveMQ Cloud:
+const char* mqtt_server = "MQTT_BROKER_URL"; 
+const int mqtt_port = 8883;
+const char* mqtt_username = "MQTT_USERNAME"; 
+const char* mqtt_password = "MQTT_PASSWORD"; 
+const char* mqtt_client_id = "ESP32_IOT_Device_001"; 
 
 // Topics MQTT
-const char* topic_sensor_data = "iot/sensor/data"; // Topic để gửi dữ liệu cảm biến
-const char* topic_device_control = "iot/device/control"; // Topic để nhận lệnh điều khiển
+const char* topic_sensor_data = "iot/sensor/data"; 
+const char* topic_device_control = "iot/device/control"; 
 
 WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
@@ -31,11 +31,7 @@ PubSubClient mqttClient(espClient);
 #define RELAY_PIN_1 26 // Chân điều khiển Quạt 1
 #define RELAY_PIN_2 27 // Chân điều khiển Quạt 2
 
-// ================= CẤU HÌNH LOGIC RELAY (QUAN TRỌNG) =================
-// Với Module Relay đen mini, thường là mức CAO (HIGH) để BẬT.
-// Nếu quạt chạy ngược (lúc bình thường thì quay, lúc có khí thì tắt), hãy đổi:
-// #define RELAY_ON  LOW
-// #define RELAY_OFF HIGH
+// ================= CẤU HÌNH LOGIC RELAY =================
 #define RELAY_ON HIGH
 #define RELAY_OFF LOW
 
@@ -50,8 +46,6 @@ const float MQ2_RATIO_MEDIUM = 0.85;    // Trung bình: 0.85 <= ratio < 0.95
 const float MQ2_RATIO_DANGER = 0.75;    // Nguy hiểm: ratio < 0.75
 const float MQ2_PPM_MEDIUM = 100.0;       // Trung bình: PPM >= 100
 const float MQ2_PPM_DANGER = 200.0;      // Nguy hiểm: PPM >= 200
-// const int MQ2_ADC_MEDIUM = 500;         // KHÔNG DÙNG - chỉ để tham khảo
-// const int MQ2_ADC_DANGER = 800;         // KHÔNG DÙNG - chỉ để tham khảo
 
 // Ngưỡng MQ7 (CO)
 const float MQ7_RATIO_SAFE = 0.95;      // An toàn: ratio >= 0.95
@@ -59,8 +53,6 @@ const float MQ7_RATIO_MEDIUM = 0.85;    // Trung bình: 0.85 <= ratio < 0.95
 const float MQ7_RATIO_DANGER = 0.75;    // Nguy hiểm: ratio < 0.75
 const float MQ7_PPM_MEDIUM = 25.0;      // Trung bình: PPM >= 25
 const float MQ7_PPM_DANGER = 100.0;     // Nguy hiểm: PPM >= 100
-// const int MQ7_ADC_MEDIUM = 400;        // KHÔNG DÙNG - chỉ để tham khảo
-// const int MQ7_ADC_DANGER = 600;        // KHÔNG DÙNG - chỉ để tham khảo
 
 // Ngưỡng MQ135 (Air Quality)
 const float MQ135_RATIO_SAFE = 0.9;     // An toàn: ratio >= 0.9
@@ -68,8 +60,6 @@ const float MQ135_RATIO_MEDIUM = 0.75; // Trung bình: 0.75 <= ratio < 0.9
 const float MQ135_RATIO_DANGER = 0.6;   // Nguy hiểm: ratio < 0.6
 const float MQ135_PPM_MEDIUM = 700.0;   // Trung bình: PPM >= 800 (tương ứng ratio <= 0.8)
 const float MQ135_PPM_DANGER = 1000.0;   // Nguy hiểm: PPM >= 1000 (tương ứng ratio <= 0.7)
-// const int MQ135_ADC_MEDIUM = 1300;     // KHÔNG DÙNG - chỉ để tham khảo
-// const int MQ135_ADC_DANGER = 1500;     // KHÔNG DÙNG - chỉ để tham khảo
 
 // ================= THÔNG SỐ KHÁC =================
 const float VCC = 5.0;
@@ -366,8 +356,6 @@ void setup()
     Serial.println("Gateway: " + WiFi.gatewayIP().toString());
     
     // Cấu hình MQTT
-    // Nếu dùng TLS (port 8883), bỏ qua certificate verification (chỉ dùng cho development)
-    // Trong production, nên dùng certificate thật
     espClient.setInsecure(); // Bỏ qua SSL certificate verification
     
     mqttClient.setServer(mqtt_server, mqtt_port);
